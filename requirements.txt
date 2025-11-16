@@ -1,0 +1,10 @@
+# libs para importar com o pip install na venv ao rodar o projeto
+# Exemplo: pip install -r requirements.txt
+torch
+torchvision 
+transformers 
+pillow
+matplotlib 
+grad-cam
+gradio 
+ollama
