@@ -91,8 +91,3 @@ if __name__ == "__main__":
     
     print(result["label"], result["probability"])
     result["heatmap"].show()
-
-    print("CUDA disponível?", torch.cuda.is_available())
-    print("Número de GPUs:", torch.cuda.device_count())
-    if torch.cuda.is_available():
-        print("Nome da GPU:", torch.cuda.get_device_name(0))
