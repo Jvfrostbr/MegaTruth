@@ -2,13 +2,14 @@ import torch
 from PIL import Image
 import numpy as np
 from transformers import CLIPProcessor, CLIPModel
+import os
 
 
 class CLIPAIModel:
     def __init__(self, device=None):
         self.model_name = "openai/clip-vit-base-patch32"
         self.device = device if device else ("cuda" if torch.cuda.is_available() else "cpu")
-        
+
         print(f"Dispositivo de execução selecionado: {self.device}")
 
         self.processor = CLIPProcessor.from_pretrained(self.model_name, use_fast=True)
@@ -18,6 +19,9 @@ class CLIPAIModel:
         self.classes = ["a real photograph", "an AI-generated image"]
 
     def predict_with_heatmap(self, image_path):
+        # Criar pasta caso não exista
+        os.makedirs("outputs/heatmaps", exist_ok=True)
+
         # ---- 1) Carregar imagem ----
         image = Image.open(image_path).convert("RGB")
 
@@ -51,7 +55,7 @@ class CLIPAIModel:
         prediction_label = self.classes[prediction_idx]
         prediction_prob = float(probs[prediction_idx])
 
-        # ---- 6) HEATMAP (Gradiente do embedding da imagem) ----
+        # ---- 6) HEATMAP ----
         image_inputs.pixel_values.requires_grad_(True)
 
         text_embeds = self.model.get_text_features(
@@ -72,8 +76,11 @@ class CLIPAIModel:
         heatmap = np.maximum(heatmap, 0)
         heatmap = heatmap / (heatmap.max() + 1e-8)
 
-        # ---- 7) Converter heatmap → PIL ----
         heatmap_img = Image.fromarray(np.uint8(heatmap * 255)).resize(image.size)
+
+        # ---- 7) SALVAR ARQUIVO heatmap ----
+        out_path = f"outputs/heatmaps/{os.path.basename(image_path)}_heatmap.png"
+        heatmap_img.save(out_path)
 
         return {
             "label": prediction_label,
@@ -81,13 +88,15 @@ class CLIPAIModel:
             "probabilities": {
                 self.classes[i]: float(probs[i]) for i in range(len(self.classes))
             },
-            "heatmap": heatmap_img
+            "heatmap_path": out_path
         }
 
 
+# exemplo de inferência
 if __name__ == "__main__":
     model = CLIPAIModel()
     result = model.predict_with_heatmap("src/exemplo.jpg")
     
     print(result["label"], result["probability"])
-    result["heatmap"].show()
+    print("Arquivo do heatmap gerado!")
+    print("Localizado em: outputs/heatmaps/exemplo.jpg_heatmap.png")
