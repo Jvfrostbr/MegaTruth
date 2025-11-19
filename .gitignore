@@ -1,2 +1,8 @@
 /venv
 /src/models/clip_finetunned
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
