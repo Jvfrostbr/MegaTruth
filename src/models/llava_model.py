@@ -49,7 +49,7 @@ class LLaVAModel:
         print("Analisando imagens com LLaVA-7B.")
         
         try:
-            # Prompt atualizado - assume que a classificação do CLIP está correta
+            # Prompt atualizado com instrução de idioma
             prompt = f"""
             Analise estas duas imagens:
             - A primeira é uma imagem original
@@ -60,7 +60,9 @@ class LLaVAModel:
             com {probabilidade_clip:.1%} de confiança. O heatmap mostra quais regiões da imagem foram 
             mais importantes para o modelo chegar a essa conclusão.
 
-            Com base nas imagens e assumindo que a classificação do CLIP está correta, explique:
+            INSTRUÇÃO IMPORTANTE: Por favor, responda em PORTUGUÊS em toda a sua explicação.
+
+            Com base nas imagens e assumindo que a classificação do CLIP está correta, explique em português:
 
             1. O que você vê na imagem original
             2. Quais regiões estão destacadas no heatmap como mais importantes para a classificação
