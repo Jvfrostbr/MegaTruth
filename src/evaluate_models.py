@@ -20,7 +20,7 @@ class CLIPWithHead:
         self.device = DEVICE
 
         print(f"Carregando modelo base: {base_path}")
-        self.processor = CLIPProcessor.from_pretrained(base_path)
+        self.processor = CLIPProcessor.from_pretrained(base_path, use_fast = True)
         self.clip = CLIPModel.from_pretrained(base_path).to(self.device)
         self.clip.eval()
 
@@ -60,7 +60,7 @@ class CLIPWithHead:
 class CLIPZeroShot:
     def __init__(self, model_path):
         self.device = DEVICE
-        self.processor = CLIPProcessor.from_pretrained(model_path)
+        self.processor = CLIPProcessor.from_pretrained(model_path, use_fast=True)
         self.clip = CLIPModel.from_pretrained(model_path).to(self.device)
         self.clip.eval()
 

@@ -8,3 +8,4 @@ matplotlib
 grad-cam
 gradio 
 ollama
+datasets
