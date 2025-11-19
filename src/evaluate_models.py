@@ -103,6 +103,8 @@ def evaluate(model, dataset):
 
 # --- MAIN ---
 if __name__ == "__main__":
+    print ("rodando em:", DEVICE)
+    
     # dataset
     full_dataset = load_dataset("Hemg/AI-Generated-vs-Real-Images-Datasets", split="train")
     split_ds = full_dataset.train_test_split(test_size=0.1, seed=42)
@@ -119,10 +121,10 @@ if __name__ == "__main__":
 
     print("\n=== Fine-Tuned ===")
     acc_ft, f1_ft, cm_ft = evaluate(ft, val)
-    print(acc_ft, f1_ft)
+    print(f"Acuracia: {acc_ft}, F1-Score: {f1_ft}")
     print(cm_ft)
 
     print("\n=== Zero-Shot ===")
     acc_zs, f1_zs, cm_zs = evaluate(zs, val)
-    print(acc_zs, f1_zs)
+    print(f"Acuracia: {acc_zs}, F1-Score: {f1_zs}")
     print(cm_zs)
