@@ -91,12 +91,3 @@ class CLIPAIModel:
             "heatmap_path": out_path
         }
 
-
-# exemplo de inferência
-if __name__ == "__main__":
-    model = CLIPAIModel()
-    result = model.predict_with_heatmap("src/exemplo.jpg")
-    
-    print(result["label"], result["probability"])
-    print("Arquivo do heatmap gerado!")
-    print("Localizado em: outputs/heatmaps/exemplo.jpg_heatmap.png")
