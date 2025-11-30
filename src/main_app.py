@@ -51,7 +51,7 @@ if __name__ == "__main__":
         print("Solicitando análise explicativa do heatmap...")
         analise_llava = llava_model.analisar_imagens(
             imagem_original=imagem_path,
-            heatmap=resultado_clip["heatmap_path"],
+            heatmap=resultado_clip["overlay_path"],
             classificacao_clip=resultado_clip["label"],
             probabilidade_clip=resultado_clip["probability"]
         )

@@ -51,25 +51,22 @@ class LLaVAModel:
         try:
             # Prompt atualizado com instrução de idioma
             prompt = f"""
-            Analise estas duas imagens:
-            - A primeira é uma imagem original
-            - A segunda é um heatmap que mostra as regiões importantes para uma decisão de classificação
+                VOCÊ É UM ASSISTENTE DE ANÁLISE VISUAL FOCADO EM DETALHES.
+                
+                Sua tarefa é analisar DUAS imagens:
+                1. A Imagem Original (Retrato).
+                2. O Overlay (Sobreposição): Mostra pontos coloridos/brilhantes sobre a imagem onde o detector encontrou sinais de IA.
 
-            CONTEXTO:
-            Um modelo de visão computacional (CLIP) classificou esta imagem como: "{classificacao_clip}"
-            com {probabilidade_clip:.1%} de confiança. O heatmap mostra quais regiões da imagem foram 
-            mais importantes para o modelo chegar a essa conclusão.
+                CONTEXTO:
+                Um detector de IA classificou esta imagem como: "{classificacao_clip}" ({probabilidade_clip:.1%} de certeza).
+                
+                INSTRUÇÃO: Responda em PORTUGUÊS seguindo a lista abaixo.
 
-            INSTRUÇÃO IMPORTANTE: Por favor, responda em PORTUGUÊS em toda a sua explicação.
-
-            Com base nas imagens e assumindo que a classificação do CLIP está correta, explique em português:
-
-            1. O que você vê na imagem original
-            2. Quais regiões estão destacadas no heatmap como mais importantes para a classificação
-            3. Como as regiões destacadas no heatmap se relacionam com características que distinguem 
-               "{classificacao_clip}" do outro tipo de imagem
-            4. Por que o heatmap faz sentido em relação ao conteúdo da imagem original e à classificação
-            5. Quais elementos visuais na imagem suportam a classificação como "{classificacao_clip}"
+                1. O que você vê na imagem original? (Descreva a pessoa, o estilo e o fundo).
+                2. Onde estão concentrados os pontos coloridos/brilhantes no Overlay? (Ex: Estão nos olhos? Na pele? No cabelo? No fundo?).
+                3. Olhando para a imagem original nessas mesmas áreas destacadas, a textura parece natural?
+                - Procure por: Pele lisa demais (plástico), olhos assimétricos, cabelo borrado ou fundo estranho.
+                4. Conclusão: Por que esses detalhes visuais suportam a classificação de "{classificacao_clip}"?
             """
             
             # Envia as duas imagens para o LLaVA
