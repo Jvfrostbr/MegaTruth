@@ -1,5 +1,6 @@
 /venv
 /src/models/clip_finetunned
+.env
 
 # Python cache
 __pycache__/
