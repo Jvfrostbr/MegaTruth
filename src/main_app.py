@@ -4,8 +4,8 @@ import sys
 # Adiciona o diretório src ao path para imports
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
-from models.vision_model import CLIPAIModel
-from models.llava_model import LLaVAModel
+from models.vision_model_clip import CLIPAIModel
+from models.multimodal_model_llava import LLaVAModel
 
 # Exemplo de uso integrado dos modelos CLIP e LLaVA
 if __name__ == "__main__":
@@ -14,7 +14,7 @@ if __name__ == "__main__":
     print("=" * 60)
     
     # Caminho da imagem a ser analisada
-    imagem_path = "images/exemplo.jpg"
+    imagem_path = "images/AI/monalisa_picture.jpg"
     
     # Verifica se a imagem existe
     if not os.path.exists(imagem_path):
