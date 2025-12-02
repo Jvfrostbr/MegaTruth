@@ -1,4 +1,5 @@
 import os
+import pandas as pd # Importei pandas apenas para formatar data se precisar, mas o foco é o texto
 
 # Remove a variável de ambiente problemática se ela existir
 if 'SSL_CERT_FILE' in os.environ:
@@ -28,9 +29,10 @@ class LLaVAModel:
             print(f"Erro ao verificar modelo LLaVA: {e}")
             raise
 
-    def analisar_imagens(self, imagem_original, heatmap, classificacao_clip, probabilidade_clip):
+    def analisar_imagens(self, imagem_original, heatmap, classificacao_clip, probabilidade_clip, conceitos_detectados=None):
         """
-        Analisa a imagem original e o heatmap usando LLaVA-7B, incluindo a classificação do CLIP
+        Analisa a imagem original e o heatmap usando LLaVA-7B.
+        Agora inclui os 'conceitos_detectados' (Concept Bottleneck) como evidência.
         """
         
         # Verifica se as imagens existem
@@ -46,28 +48,46 @@ class LLaVAModel:
         with open(heatmap, 'rb') as f:
             heatmap_bytes = f.read()
 
-        print("Analisando imagens com LLaVA-7B.")
+        print("Analisando imagens com LLaVA-7B...")
         
+        # --- PREPARAR A LISTA DE CONCEITOS PARA O PROMPT ---
+        texto_conceitos = "Nenhum defeito específico detectado."
+        if conceitos_detectados:
+            # Pega os top 5 conceitos para não poluir demais
+            top_conceitos = list(conceitos_detectados.items())[:5]
+            
+            # Formata uma lista : "- 'deformed hands' (85% de sinal)"
+            lista_str = "\n".join([f"   - '{k}' ({v:.1%} de intensidade)" for k, v in top_conceitos])
+            
+            texto_conceitos = f"""
+            ALERTA DE ANÁLISE SEMÂNTICA (IMPORTANTE):
+            O detector identificou os seguintes padrões visuais específicos nesta imagem:
+            {lista_str}
+            
+            > USE ESTA LISTA COMO GUIA: Verifique se esses defeitos específicos aparecem nas áreas coloridas do heatmap.
+            """
+
         try:
-            # Prompt atualizado com instrução de idioma
+            # Prompt atualizado com a injeção dos conceitos
             prompt = f"""
-                VOCÊ É UM ASSISTENTE DE ANÁLISE VISUAL FOCADO EM DETALHES.
+                VOCÊ É UM ASSISTENTE DE ANÁLISE VISUAL FOCADO EM DETALHES FORENSES.
                 
-                Sua tarefa é analisar DUAS imagens:
-                1. A Imagem Original (Retrato).
-                2. O Overlay (Sobreposição): Um mapa de calor + sobreposto com a imagem original, 
-                    onde contém pontos COLORIDOS (Verde/Amarelo/Ciano) indicam suspeita de IA.
+                Sua tarefa é analisar DUAS imagens para explicar uma detecção de IA:
+                1. A Imagem Original (Retrato/Cena).
+                2. O Overlay (Sobreposição): Mapa de calor onde pontos COLORIDOS/BRILHANTES indicam anomalias.
     
-                CONTEXTO:
-                Um detector de IA classificou esta imagem como: "{classificacao_clip}" ({probabilidade_clip:.1%} de certeza).
+                CONTEXTO GERAL:
+                Classificação do Detector: "{classificacao_clip}" ({probabilidade_clip:.1%} de certeza).
+                
+                {texto_conceitos}
                 
                 INSTRUÇÃO: Responda em PORTUGUÊS seguindo a lista abaixo.
 
-                1. O que você vê na imagem original? (Descreva a pessoa, o estilo e o fundo).
-                2. Onde estão concentrados os pontos coloridos/brilhantes no Overlay? (Ex: Estão nos olhos? Na pele? No cabelo? No fundo?).
-                3. Olhando para a imagem original nessas mesmas áreas destacadas, a textura parece natural?
-                - Procure por: Pele lisa demais (plástico), olhos assimétricos, cabelo borrado ou fundo estranho.
-                4. Conclusão: Por que esses detalhes visuais suportam a classificação de "{classificacao_clip}"?
+                1. O que você vê na imagem original? (Descreva brevemente a cena/pessoa).
+                2. Onde estão concentrados os pontos coloridos no Overlay? (Ex: Olhos, mãos, fundo, cabelo).
+                3. Olhando para a imagem original nessas áreas destacadas, a textura parece natural?
+                   - Se a lista acima mencionou defeitos (ex: 'waxy skin', 'deformed hands'), confirme se você os vê nessas áreas.
+                4. Conclusão: Como os pontos do heatmap e os defeitos listados confirmam a classificação de "{classificacao_clip}"?
             """
             
             # Envia as duas imagens para o LLaVA

@@ -2,7 +2,6 @@ import os
 import base64
 import requests
 
-
 class NemotronVL:
     def __init__(self):
         self.model_name = "nvidia/nemotron-nano-12b-v2-vl:free"
@@ -21,48 +20,67 @@ class NemotronVL:
         with open(caminho, "rb") as f:
             return base64.b64encode(f.read()).decode("utf-8")
 
-    def analisar_imagens(self, imagem_original, heatmap, classificacao_clip, probabilidade_clip):
+    def analisar_imagens(self, imagem_original, heatmap, classificacao_clip, probabilidade_clip, conceitos_detectados=None):
         """
-        Envia imagem original + heatmap para o Nemotron VL Free
-        e retorna uma análise multimodal detalhada em português.
+        Envia imagem original + heatmap + conceitos semânticos para o Nemotron.
         """
 
         print("Carregando imagens...")
+        try:
+            img1_b64 = self._carregar_imagem_base64(imagem_original)
+            img2_b64 = self._carregar_imagem_base64(heatmap)
+        except Exception as e:
+            print(f"Erro ao carregar imagens: {e}")
+            return None
 
-        img1_b64 = self._carregar_imagem_base64(imagem_original)
-        img2_b64 = self._carregar_imagem_base64(heatmap)
+        print("Imagens carregadas. Preparando prompt com conceitos...")
 
-        print("Imagens carregadas. Enviando para o Nemotron...")
-
-        # -------- PROMPT MULTIMODAL --------
-        prompt = f"""
-            VOCÊ É UM PERITO FORENSE DIGITAL.
+        # --- 1. PREPARAR A LISTA DE CONCEITOS ---
+        texto_conceitos = "Nenhum defeito específico listado pelo detector semântico."
+        if conceitos_detectados:
+            # Pega os top 5
+            top_conceitos = list(conceitos_detectados.items())[:5]
+            lista_str = "\n".join([f"   - '{k}' ({v:.1%} de sinal)" for k, v in top_conceitos])
             
-            Sua tarefa é analisar DUAS imagens:
-            1. A Imagem Original.
-            2. O Overlay (Sobreposição): Um mapa de calor + sobreposto com a imagem original, 
-            onde contém pontos COLORIDOS (Verde/Amarelo/Ciano) indicam suspeita de IA.
-
-            CONTEXTO:
-            O detector (CLIP) classificou como: "{classificacao_clip}" ({probabilidade_clip:.1%} de certeza).
-
-            INSTRUÇÃO:
-            Responda em PORTUGUÊS.
-
-            1. O que você vê na imagem original? (Descrição breve).
-            2. Onde estão os pontos coloridos/brilhantes no Overlay? (Ex: Olhos, pele, cabelo, fundo).
-            3. Comparando com a original: Nessas áreas destacadas, existe alguma textura estranha, pele muito lisa ou falha visual?
-            4. Conclusão: Por que esses detalhes visuais suportam a classificação de "{classificacao_clip}"?
+            texto_conceitos = f"""
+            ALERTA DE ANÁLISE SEMÂNTICA (IMPORTANTE):
+            O detector identificou os seguintes padrões de defeito nesta imagem:
+            {lista_str}
+            
+            > USE ESTA LISTA COMO GUIA: Verifique se esses defeitos específicos aparecem nas áreas coloridas do heatmap.
             """
 
-        # -------- REQUISIÇÃO - FORMATO CORRETO DO OPENROUTER --------
+        # --- 2. PROMPT OTIMIZADO (Igual ao do LLaVA, mas adaptado para o Nemotron) ---
+        prompt = f"""
+            VOCÊ É UM PERITO FORENSE DIGITAL SÊNIOR.
+            
+            Sua tarefa é cruzar dados visuais e semânticos para explicar uma detecção de IA.
+            
+            DADOS DE ENTRADA:
+            1. Imagem Original.
+            2. Imagem Overlay (Mapa de Calor): Pontos COLORIDOS/BRILHANTES indicam onde o modelo "olhou".
+
+            CONTEXTO GERAL:
+            Classificação: "{classificacao_clip}" ({probabilidade_clip:.1%} de certeza).
+
+            {texto_conceitos}
+
+            INSTRUÇÃO: Responda em PORTUGUÊS, de forma técnica e direta.
+
+            1. Análise da Cena: Descreva brevemente o sujeito e o ambiente da imagem original.
+            2. Foco do Heatmap: Onde estão concentrados os pontos coloridos no Overlay? (Olhos, mãos, pele, fundo?).
+            3. Verificação de Defeitos: Olhando para a imagem original nessas áreas, você confirma a presença dos defeitos listados acima (ex: pele de plástico, assimetria, borrão)?
+            4. Veredito: Explique como a combinação do heatmap com os conceitos detectados confirma a classificação de "{classificacao_clip}".
+        """
+
+        # -------- REQUISIÇÃO OPENROUTER --------
         url = "https://openrouter.ai/api/v1/chat/completions"
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
             "HTTP-Referer": "http://localhost",
-            "X-Title": "Nemotron VL Analyzer"
+            "X-Title": "Megatruth Analyzer"
         }
 
         payload = {
@@ -72,20 +90,8 @@ class NemotronVL:
                     "role": "user",
                     "content": [
                         {"type": "text", "text": prompt},
-
-                        # → FORMATO CORRETO PARA IMAGENS
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{img1_b64}"
-                            }
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{img2_b64}"
-                            }
-                        }
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img1_b64}"}},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img2_b64}"}}
                     ]
                 }
             ]
@@ -93,22 +99,20 @@ class NemotronVL:
 
         # -------- ENVIO --------
         try:
-            response = requests.post(url, json=payload, headers=headers, timeout=60)
+            response = requests.post(url, json=payload, headers=headers, timeout=90) # Aumentei timeout para 90s
             response.raise_for_status()
             data = response.json()
 
-            result = data["choices"][0]["message"]["content"]
-
-            print("\n=== RESPOSTA DO NEMOTRON VL ===\n")
-            print(result)
-            print("\n================================\n")
-
-            return result
+            if "choices" in data and len(data["choices"]) > 0:
+                result = data["choices"][0]["message"]["content"]
+                print("\n=== RESPOSTA DO NEMOTRON VL ===\n")
+                print(result)
+                print("\n================================\n")
+                return result
+            else:
+                print(f"Resposta inesperada da API: {data}")
+                return None
 
         except Exception as e:
             print(f"Erro ao enviar para o Nemotron: {e}")
-            try:
-                print("Resposta bruta da API:", response.text)
-            except:
-                pass
             return None
