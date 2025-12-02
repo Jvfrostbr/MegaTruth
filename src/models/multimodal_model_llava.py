@@ -55,8 +55,9 @@ class LLaVAModel:
                 
                 Sua tarefa é analisar DUAS imagens:
                 1. A Imagem Original (Retrato).
-                2. O Overlay (Sobreposição): Mostra pontos coloridos/brilhantes sobre a imagem onde o detector encontrou sinais de IA.
-
+                2. O Overlay (Sobreposição): Um mapa de calor + sobreposto com a imagem original, 
+                    onde contém pontos COLORIDOS (Verde/Amarelo/Ciano) indicam suspeita de IA.
+    
                 CONTEXTO:
                 Um detector de IA classificou esta imagem como: "{classificacao_clip}" ({probabilidade_clip:.1%} de certeza).
                 
