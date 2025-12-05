@@ -133,7 +133,7 @@ Aqui está o *roadmap* do MegaTruth formatado como uma lista de verificação (c
 Criação da interface de usuário **simples e funcional** para demonstrações e usabilidade.
 
 * [x] **Design e Estrutura Inicial (MVP):**
-    * [x] Definir o *framework* de UI (Gradio/Streamlit).
+    * [x] Definir o *framework* de UI (Gradio)
     * [x] Implementar o componente de **Upload de Imagem** (`PNG`, `JPG`).
 * [x] **Módulo de Saída Principal:**
     * [x] Exibir **Rótulo de Classificação** (`Real` vs `IA`) e **Confiança**.
