@@ -1,5 +1,5 @@
 /venv
-/src/models/clip_finetunned
+/src/models/clip_finetuned
 .env
 
 # Python cache
