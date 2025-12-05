@@ -131,12 +131,16 @@ class CLIPAIModel:
         cv2.imwrite(heatmap_path, heatmap_color)
         cv2.imwrite(overlay_path, overlay)
 
+        # ---- 10) Analisar conceitos (Concept Bottleneck) ----
+        conceitos_detectados = self.analisar_conceitos(image_path)
+
         return {
             "label": prediction_label,
             "probability": prediction_prob,
             "probabilities": {self.classes[i]: float(probs[i]) for i in range(len(self.classes))},
             "heatmap_path": heatmap_path,
-            "overlay_path": overlay_path
+            "overlay_path": overlay_path,
+            "conceitos": conceitos_detectados
         }
 
 

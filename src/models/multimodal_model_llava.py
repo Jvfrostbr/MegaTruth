@@ -1,5 +1,6 @@
 import os
 import pandas as pd # Importei pandas apenas para formatar data se precisar, mas o foco é o texto
+import base64
 
 # Remove a variável de ambiente problemática se ela existir
 if 'SSL_CERT_FILE' in os.environ:
@@ -48,6 +49,13 @@ class LLaVAModel:
         with open(heatmap, 'rb') as f:
             heatmap_bytes = f.read()
 
+        # Converter para base64 para garantir compatibilidade
+        image_original_b64 = base64.b64encode(image_original_bytes).decode('utf-8')
+        heatmap_b64 = base64.b64encode(heatmap_bytes).decode('utf-8')
+        
+        print(f"📸 Imagem original: {len(image_original_bytes)} bytes")
+        print(f"🔥 Heatmap: {len(heatmap_bytes)} bytes")
+
         print("Analisando imagens com LLaVA-7B...")
         
         # --- PREPARAR A LISTA DE CONCEITOS PARA O PROMPT ---
@@ -90,19 +98,19 @@ class LLaVAModel:
                 4. Conclusão: Como os pontos do heatmap e os defeitos listados confirmam a classificação de "{classificacao_clip}"?
             """
             
-            # Envia as duas imagens para o LLaVA
+            # Envia as duas imagens para o LLaVA usando base64
             response = ollama.chat(
                 model=self.model_name,
                 messages=[
                     {
                         'role': 'user',
                         'content': prompt,
-                        'images': [image_original_bytes, heatmap_bytes]
+                        'images': [image_original_b64, heatmap_b64]
                     }
                 ]
             )
             
-            print("Análise concluída!\n")
+            print("✅ Análise concluída!\n")
             print("=" * 60)
             print("RESPOSTA DO LLaVA:")
             print("=" * 60)

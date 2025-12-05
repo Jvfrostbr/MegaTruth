@@ -122,35 +122,74 @@ pip install -r requirements.txt
 
 Focado nas prioridades estratégicas para tornar o MegaTruth mais preciso, explicável e acessível.
 
-## [ ] **GUI (Gradio/Streamlit)**
+## 💡 Roadmap do MegaTruth (Checklist)
 
-**Objetivo:** interface simples e funcional para demonstrações.
+Aqui está o *roadmap* do MegaTruth formatado como uma lista de verificação (checklist), detalhando os subtópicos e entregáveis para cada módulo planejado.
 
-**Inclui:** upload, heatmap, explicação, comparação e histórico.
-<!-- **Dificuldade:** ⭐⭐
-**Impacto:** ⭐⭐⭐. -->
+---
 
-## [ ] **Finetuning do CLIP**
+### 1. GUI (Gradio/Streamlit)
 
-**Objetivo:** melhorar a precisão no domínio *real vs IA*.
+Criação da interface de usuário **simples e funcional** para demonstrações e usabilidade.
 
-**Inclui:** dataset especializado, LoRA, comparação com baseline, heatmap adaptado.
- <!--**Dificuldade:** ⭐⭐⭐ -->
-<!-- **Impacto:** 🚀 altíssimo. -->
+* [x] **Design e Estrutura Inicial (MVP):**
+    * [x] Definir o *framework* de UI (Gradio/Streamlit).
+    * [x] Implementar o componente de **Upload de Imagem** (`PNG`, `JPG`).
+* [x] **Módulo de Saída Principal:**
+    * [x] Exibir **Rótulo de Classificação** (`Real` vs `IA`) e **Confiança**.
+    * [x] Área dedicada à visualização do **Heatmap** (Grad-CAM).
+    * [x] Caixa de texto para a **Explicação Textual** (saída do LLaVA).
+* [ ] **Funcionalidades Adicionais:**
+    * [ ] Criar um **Histórico Simples** de análises da sessão.
 
-## [ ] **Concept Bottleneck (Explicabilidade Profunda)**
+---
 
-**Objetivo:** criar explicações intermediárias baseadas em conceitos visuais.
+### 2. Finetuning do CLIP
 
-**Inclui:** definição de conceitos, modelo preditor, integração ao LLaVA.
-<!-- **Dificuldade:** ⭐⭐⭐⭐ -->
-<!-- **Impacto:** 🔥 muito alto. -->
+Melhoria da precisão e **robustez** do classificador CLIP para o domínio *real vs IA*.
+
+* [ ] **Preparação do Dataset Especializado:**
+    * [ ] Curadoria de um **dataset balanceado** (Real vs. IA de múltiplos modelos generativos).
+    * [ ] Implementar **Estratégia de Aumento de Dados** (*Data Augmentation*) simulando compressão (JPEG) e ruído.
+* [ ] **Implementação do Finetuning (LoRA):**
+    * [ ] Selecionar o *backbone* CLIP e definir a **arquitetura LoRA**.
+    * [ ] Treinar o modelo utilizando LoRA e definir hiperparâmetros (taxa de aprendizado, épocas).
+* [ ] **Avaliação e Comparação:**
+    * [ ] Estabelecer a **linha de base (*baseline*)** do CLIP sem *finetuning*.
+    * [ ] Avaliar o modelo *finetunado* em métricas como **Acurácia, AUC e F1-Score**.
+* [ ] **Adaptação do Heatmap:**
+    * [ ] Verificar a coerência do **Grad-CAM** após o *finetuning*.
+
+---
+
+### 3. Concept Bottleneck (Explicabilidade Profunda)
+
+Fornecer explicações intermediárias baseadas em **conceitos semânticos e visuais** de artefatos. 
+
+[Image of a Concept Bottleneck Model diagram showing input, concept layer, and output]
 
 
-## [ ] **Chatbot Explicativo**
+* [ ] **Definição de Conceitos:**
+    * [ ] Definir uma ontologia de **artefatos de IA** e **inconsistências visuais** (ex: "Dedos Deformados", "Textura Irregular").
+    * [ ] Rotular um subconjunto do *dataset* com a **presença/ausência** desses conceitos.
+* [ ] **Desenvolvimento do CBM:**
+    * [ ] Treinar um **modelo auxiliar leve** para **prever a probabilidade de cada conceito** (Gargalo Conceitual).
+* [ ] **Integração ao LLaVA:**
+    * [ ] Modificar o *prompt* do LLaVA para incluir a **Lista de Conceitos Preditos**.
+    * [ ] Instruir o LLaVA a **incorporar esses conceitos** na explicação textual.
 
-**Objetivo:** conversar sobre a análise e suas evidências.
+---
 
-**Inclui:** JSON estruturado, prompts multimodais, histórico de conversa.
-<!--**Dificuldade:** ⭐⭐
-**Impacto:** ⭐⭐–⭐⭐⭐. -->
+### 4. Chatbot Explicativo
+
+Transformar a explicação estática em uma **interação dinâmica** sobre a análise e as evidências.
+
+* [ ] **Estrutura de Diálogo:**
+    * [ ] Implementar o rastreamento do **histórico de conversas** (*history buffer*).
+    * [ ] Definir a **memória curta** focada na imagem atual e análise.
+* [ ] **JSON Estruturado de Saída:**
+    * [ ] Garantir que a saída inicial do LLaVA esteja em formato **JSON** com dados chave (`rótulo`, `evidências`, `regiões`).
+* [ ] **Prompts Multimodais para Conversa:**
+    * [ ] Criar *templates* de *prompt* para o LLaVA que respondam a perguntas comuns, utilizando o **JSON e a Imagem/Heatmap** como contexto.
+* [ ] **Testes de Coerência:**
+    * [ ] Realizar testes para garantir que o Chatbot **não alucine informações** sobre o Heatmap ou a classificação.
