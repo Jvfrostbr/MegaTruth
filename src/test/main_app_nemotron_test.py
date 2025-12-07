@@ -1,19 +1,25 @@
 import os
 import sys
 import pandas as pd  # Para timestamp no relatório
+from dotenv import load_dotenv
 
 # Carregar variáveis de ambiente (.env) para a API Key
 try:
-    from dotenv import load_dotenv
+    
     load_dotenv()
 except ImportError:
-    print("⚠️ python-dotenv não instalado. Certifique-se que a chave OPENROUTER_API_KEY está no ambiente.")
+    print("python-dotenv não instalado. Certifique-se que a chave OPENROUTER_API_KEY está no ambiente.")
 
 # Adiciona o diretório src ao path para imports
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
-from models.vision_model_clip import CLIPAIModel
-from models.multimodal_model_nemotron import NemotronVL
+current_dir = os.path.dirname(os.path.abspath(__file__))
+src_dir = os.path.dirname(current_dir)
+sys.path.append(src_dir)
+
+from models.vision_model_clip import CLIPAIModel         # noqa: E402
+from models.multimodal_model_nemotron import NemotronVL  # noqa: E402
+
 
 if __name__ == "__main__":
     print("=" * 60)
@@ -21,7 +27,7 @@ if __name__ == "__main__":
     print("=" * 60)
     
     # Caminho da imagem a ser analisada
-    imagem_path = "images/AI/monalisa_picture.jpg" # <--- Altere aqui
+    imagem_path = "images/inferences/AI/monalisa_picture.jpg" # <--- Altere aqui
     
     # Verifica se a imagem existe
     if not os.path.exists(imagem_path):
@@ -75,7 +81,8 @@ if __name__ == "__main__":
             heatmap=resultado_clip["overlay_path"], 
             classificacao_clip=resultado_clip["label"],
             probabilidade_clip=resultado_clip["probability"],
-            conceitos_detectados=conceitos 
+            conceitos_detectados=conceitos,
+            color_overlay="vermelho" 
         )
 
         # ==============================================================================
@@ -86,7 +93,7 @@ if __name__ == "__main__":
             print("-" * 50)
             
             base_name = os.path.basename(imagem_path).split('.')[0]
-            report_path = f"outputs/heatmaps/{base_name}_relatorio_nemotron.txt"
+            report_path = f"outputs/reports/{base_name}_relatorio_nemotron.txt"
             
             # Prepara o texto dos conceitos para o arquivo
             conceitos_txt = "Nenhum defeito específico identificado."

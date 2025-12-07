@@ -5,9 +5,14 @@ import pandas as pd  # Para timestamp no relatório
 # Adiciona o diretório src ao path para imports
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+src_dir = os.path.dirname(current_dir)
+sys.path.append(src_dir)
+
 # Importa apenas os modelos locais
-from models.vision_model_clip import CLIPAIModel
-from models.multimodal_model_llava import LLaVAModel
+from models.vision_model_clip import CLIPAIModel        # noqa: E402
+from models.multimodal_model_llava import LLaVAModel    # noqa: E402
 
 if __name__ == "__main__":
     print("=" * 60)
@@ -15,8 +20,8 @@ if __name__ == "__main__":
     print("=" * 60)
     
     # Caminho da imagem a ser analisada
-    imagem_path = "images/AI/monalisa_picture.jpg" # <--- Altere aqui para testar outras
-    
+    imagem_path = "images/inferences/AI/mao_deformada.jpeg" # <--- Altere aqui para testar outras
+  
     # Verifica se a imagem existe
     if not os.path.exists(imagem_path):
         print(f"❌ Erro: Imagem não encontrada: {imagem_path}")
@@ -69,7 +74,8 @@ if __name__ == "__main__":
             heatmap=resultado_clip["overlay_path"], 
             classificacao_clip=resultado_clip["label"],
             probabilidade_clip=resultado_clip["probability"],
-            conceitos_detectados=conceitos 
+            conceitos_detectados=conceitos, 
+            color_overlay="Vermelho" 
         )
 
         # ==============================================================================
@@ -80,7 +86,7 @@ if __name__ == "__main__":
             print("-" * 50)
             
             base_name = os.path.basename(imagem_path).split('.')[0]
-            report_path = f"outputs/heatmaps/{base_name}_relatorio_llava.txt"
+            report_path = f"outputs/reports/{base_name}_relatorio_llava.txt"
             
             # Prepara o texto dos conceitos para o arquivo
             conceitos_txt = "Nenhum defeito específico identificado."
