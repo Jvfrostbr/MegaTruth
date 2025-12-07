@@ -10,13 +10,19 @@ warnings.filterwarnings("ignore", category=UserWarning, message=".*cuBLAS.*")
 
 class CLIPAIModel:
     def __init__(self, model_path=None, device=None):
-
-        # --- Caminho do Modelo clip---
-        if os.path.exists("./clip-finetuned-artifact"):
-            self.model_name = "./clip-finetuned-artifact"
+        
+        #1. Define o caminho relativo padrão onde o modelo deveria estar
+        base_dir = os.path.dirname(os.path.abspath(__file__)) # Pega a pasta onde este arquivo .py está (src/models)
+        default_path = os.path.join(base_dir, "clip_finetuned")
+        
+        # 2. Lógica de Seleção do Modelo
+        if os.path.exists(default_path) and model_path != "openai/clip-vit-base-patch16":
+            self.model_name = default_path
+            print(f"Usando modelo Fine-Tuned (Artifact): {self.model_name}")
         else:
             self.model_name = "openai/clip-vit-base-patch16"
-            print("AVISO: Usando modelo base da OpenAI (não treinado no Artifact).")
+            print("AVISO: Modelo Fine-Tuned não encontrado. Usando modelo base da OpenAI.")
+            print(f"   (Esperava encontrar em: {default_path})")
 
         self.device = device if device else ("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Carregando CLIP de: {self.model_name}")
@@ -40,30 +46,28 @@ class CLIPAIModel:
 
     def predict_with_heatmap(self, image_path):
         """
-        Função para classificar a imagem e gerar o heatmap e o overlay.
-        Retorna o label, a probabilidade e os conceitos que mais 'acenderam' na imagem.
+        Classifica a imagem, gera um heatmap intuitivo (tratado) e analisa conceitos.
         """
-
+        # Garante que a pasta de saída existe
         os.makedirs("outputs/heatmaps", exist_ok=True)
 
         # ---- 1) Carregar imagem ----
         image = Image.open(image_path).convert("RGB")
         w, h = image.size
 
-        # ---- 2) Processar textos ----
+        # ---- 2) Processar textos e imagem ----
         text_inputs = self.processor(
             text=self.classes,
             return_tensors="pt",
             padding=True
         ).to(self.device)
 
-        # ---- 3) Processar imagem ----
         image_inputs = self.processor(
             images=image,
             return_tensors="pt"
         ).to(self.device)
 
-        # ---- 4) Forward normal (sem gradiente) ----
+        # ---- 4) Forward Pass (Classificação) ----
         with torch.no_grad():
             outputs = self.model(
                 input_ids=text_inputs.input_ids,
@@ -73,66 +77,102 @@ class CLIPAIModel:
             )
             logits = outputs.logits_per_image
 
-        # ---- 5) Classificação ----
+        # ---- 5) Resultados da Classificação ----
         probs = torch.softmax(logits, dim=1).detach().cpu().numpy()[0]
         prediction_idx = int(np.argmax(probs))
         prediction_label = self.classes[prediction_idx]
         prediction_prob = float(probs[prediction_idx])
 
-        # ---- 6) Gerar GradCAM ----
+        # ---- 6) Gerar GradCAM (Raw Heatmap) ----
+        # Habilita gradientes para a imagem
         image_inputs.pixel_values.requires_grad_(True)
-
-        image_embeds = self.model.get_image_features(
-            pixel_values=image_inputs.pixel_values
-        )
-
+        
+        # Recalcula embeddings com gradiente ativado
+        image_embeds = self.model.get_image_features(pixel_values=image_inputs.pixel_values)
         text_embeds = self.model.get_text_features(
-            input_ids=text_inputs.input_ids,
+            input_ids=text_inputs.input_ids, 
             attention_mask=text_inputs.attention_mask
         )
 
-        score = torch.matmul(
-            image_embeds,
-            text_embeds[prediction_idx].unsqueeze(1)
-        ).squeeze()
-
+        # Calcula score para a classe vencedora e faz backprop
+        score = torch.matmul(image_embeds, text_embeds[prediction_idx].unsqueeze(1)).squeeze()
         self.model.zero_grad()
         score.backward()
 
+        # Extrai o gradiente e tira a média dos canais
         grads = image_inputs.pixel_values.grad[0].detach().cpu().numpy()
-        heatmap = np.mean(grads, axis=0)
+        heatmap_raw = np.mean(grads, axis=0)
 
-        # ---- AJUSTE DE NORMALIZAÇÃO (CORREÇÃO) ----
+        # ---- 7) PÓS-PROCESSAMENTO "VISÃO HUMANA" (A Mágica) ----
+        
+        # A. Redimensionar para o tamanho original da imagem
+        heatmap = cv2.resize(heatmap_raw, (w, h))
+        
+        # B. Normalizar (0 a 1)
         heatmap = np.maximum(heatmap, 0)
+        heatmap /= (np.max(heatmap) + 1e-8)
         
-        # Garante pico em 1.0 para visibilidade de cores "mornas"
-        heatmap_max = np.max(heatmap)
-        if heatmap_max > 0:
-            heatmap = heatmap / heatmap_max
+        # C. Limpar ruído de fundo (Threshold)
+        # Ignora pixels com menos de 20% de importância
+        heatmap[heatmap < 0.2] = 0
         
-        # ---- 7) Converter p/ colormap JET colorido ----
-        heatmap_color = np.uint8(255 * heatmap)
-        heatmap_color = cv2.applyColorMap(heatmap_color, cv2.COLORMAP_JET)
+        # D. "Engordar" as áreas (Dilation)
+        # Conecta pontinhos isolados para formar uma região coerente
+        kernel_size = int(min(w, h) * 0.03) # 3% do tamanho da imagem
+        if kernel_size < 3: kernel_size = 3
+        kernel = np.ones((kernel_size, kernel_size), np.uint8)
+        heatmap_dilated = cv2.dilate(heatmap, kernel, iterations=2)
+        
+        # E. Suavizar (Gaussian Blur)
+        # Deixa a mancha com bordas macias (estilo nuvem/calor)
+        blur_size = int(min(w, h) * 0.08) # 8% da imagem
+        if blur_size % 2 == 0: blur_size += 1 # Tem que ser ímpar
+        heatmap_final = cv2.GaussianBlur(heatmap_dilated, (blur_size, blur_size), 0)
+        
+        # Re-normaliza após o blur para garantir brilho máximo no centro
+        heatmap_final /= (np.max(heatmap_final) + 1e-8)
 
-        # Redimensionar
-        heatmap_color = cv2.resize(heatmap_color, (w, h))
-
-        # ---- 8) Overlay do heatmap na imagem original ----
+        # ---- 8) Gerar Overlay "Red Alert" ----
         img_np = np.array(image)
-        img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
+        
+        # Cria uma máscara Vermelha Sólida
+        red_mask = np.zeros_like(img_np)
+        red_mask[:, :, 0] = 255 # Canal R (Vermelho)
+        
+        # Converte para float para misturar
+        img_float = img_np.astype(np.float32) / 255.0
+        mask_float = red_mask.astype(np.float32) / 255.0
+        
+        # O heatmap tratado vira o canal Alpha (Transparência)
+        alpha = heatmap_final[:, :, None]
+        
+        # Fórmula de Blending: 
+        # Onde alpha é alto -> Mostra mais vermelho e escurece um pouco a original
+        # Onde alpha é zero -> Mostra a original intacta
+        overlay_float = (mask_float * alpha * 0.8) + (img_float * (1.0 - (alpha * 0.5)))
+        
+        # Converte de volta para imagem (0-255)
+        overlay = np.clip(overlay_float * 255, 0, 255).astype(np.uint8)
+        
+        # Converte para BGR (padrão OpenCV) para salvar
+        overlay_bgr = cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR)
+        
+        # Também gera o JET clássico suavizado (opcional, bom para debug)
+        heatmap_jet = cv2.applyColorMap(np.uint8(255 * heatmap_final), cv2.COLORMAP_JET)
 
-        overlay = cv2.addWeighted(img_bgr, 0.6, heatmap_color, 0.4, 0)
-
-        # ---- 9) Salvar arquivos ----
+        # ---- 9) Salvar Arquivos ----
         base = os.path.basename(image_path)
-        heatmap_path = f"outputs/heatmaps/{base}_heatmap_color.png"
+        
+        # Salvamos o Overlay Limpo como padrão
         overlay_path = f"outputs/heatmaps/{base}_overlay.png"
+        heatmap_path = f"outputs/heatmaps/{base}_heatmap_raw.png"
 
-        cv2.imwrite(heatmap_path, heatmap_color)
-        cv2.imwrite(overlay_path, overlay)
+        cv2.imwrite(overlay_path, overlay_bgr)
+        cv2.imwrite(heatmap_path, heatmap_jet)
 
-        # ---- 10) Analisar conceitos (Concept Bottleneck) ----
-        conceitos_detectados = self.analisar_conceitos(image_path)
+        # ---- 10) Analisar Conceitos (Semântica) ----
+        # Passa a classificação prevista para ativar o Gating (Filtro Inteligente)
+        conceitos_detectados = self.analisar_conceitos(image_path, classificacao_preliminar=prediction_label)
 
         return {
             "label": prediction_label,
@@ -144,7 +184,7 @@ class CLIPAIModel:
         }
 
 
-    def analisar_conceitos(self, image_path):
+    def analisar_conceitos(self, image_path, classificacao_preliminar=None):
         """
         Testa a imagem contra uma biblioteca vasta de 'artefatos de IA'.
         Retorna os Top conceitos que mais 'acenderam' na imagem.
@@ -195,12 +235,19 @@ class CLIPAIModel:
             "gibberish text", "alien hieroglyphs", "illegible signboard", "morphed logos"
         ]
         
-        # Adiciona prompt neutro para contraste
+        
         conceitos_completos = conceitos + ["a high quality natural photograph"]
 
         try:
             image = Image.open(image_path).convert("RGB")
-
+            
+            # Se foi classificado como REAL (0), sobe a régua para 0.25 (só aceita defeito óbvio)
+            # Se foi classificado como FAKE (1), mantém régua baixa 0.10 (aceita pistas sutis)
+            if classificacao_preliminar == "a real photograph" or classificacao_preliminar == 0:
+                threshold = 0.25 
+            else:
+                threshold = 0.10
+                
             inputs = self.processor(
                 text=conceitos_completos,
                 images=image,
@@ -215,13 +262,13 @@ class CLIPAIModel:
                 probs = logits_per_image.softmax(dim=1).cpu().numpy()[0]
 
             resultado = {}
-            # Ignora o último item (o prompt neutro "high quality photo")
+        
             for i in range(len(conceitos)):
-                
-                if probs[i] > 0.10: 
-                    resultado[conceitos[i]] = float(probs[i])
+                # Usa o threshold dinâmico
+                    if probs[i] > threshold: 
+                        resultado[conceitos[i]] = float(probs[i])
             
-            # Ordena do maior para o menor
+            
             return dict(sorted(resultado.items(), key=lambda item: item[1], reverse=True))
 
         except Exception as e:
