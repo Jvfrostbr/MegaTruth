@@ -20,7 +20,7 @@ class NemotronVL:
         with open(caminho, "rb") as f:
             return base64.b64encode(f.read()).decode("utf-8")
 
-    def analisar_imagens(self, imagem_original, heatmap, classificacao_clip, probabilidade_clip, conceitos_detectados=None):
+    def analisar_imagens(self, imagem_original, heatmap, classificacao_clip, probabilidade_clip, conceitos_detectados=None, color_overlay="vermelho"):
         """
         Envia imagem original + heatmap + conceitos semânticos para o Nemotron.
         """
@@ -50,7 +50,6 @@ class NemotronVL:
             > USE ESTA LISTA COMO GUIA: Verifique se esses defeitos específicos aparecem nas áreas coloridas do heatmap.
             """
 
-        # --- 2. PROMPT OTIMIZADO (Igual ao do LLaVA, mas adaptado para o Nemotron) ---
         prompt = f"""
             VOCÊ É UM PERITO FORENSE DIGITAL SÊNIOR.
             
@@ -58,21 +57,28 @@ class NemotronVL:
             
             DADOS DE ENTRADA:
             1. Imagem Original.
-            2. Imagem Overlay (Mapa de Calor): Pontos COLORIDOS/BRILHANTES indicam onde o modelo "olhou".
+            2.  **Overlay (Capa de Chuva)**: É a imagem original contendo Uma NÉVOA / MANCHA, de cor {color_overlay}
+            indicando as regiões que o detector considerou importantes.
 
             CONTEXTO GERAL:
             Classificação: "{classificacao_clip}" ({probabilidade_clip:.1%} de certeza).
 
             {texto_conceitos}
+                
+            **DIRETRIZ DE SEGURANÇA (IMPORTANTE):**
+            - A lista de conceitos acima é uma indicação do que o detector semântico encontrou.
+            - Se a imagem for REAL, a tendencia é que a lista possa estar vazia ou conter "falsos positivos" (ruído). **NÃO INVENTE DEFEITOS** só para concordar com a lista.
+            - Se a imagem for FAKE, a lista provavelmente indica o erro exato. Use-a como guia.
 
             INSTRUÇÃO: Responda em PORTUGUÊS, de forma técnica e direta.
 
             1. Análise da Cena: Descreva brevemente o sujeito e o ambiente da imagem original.
-            2. Foco do Heatmap: Onde estão concentrados os pontos coloridos no Overlay? (Olhos, mãos, pele, fundo?).
-            3. Verificação de Defeitos: Olhando para a imagem original nessas áreas, você confirma a presença dos defeitos listados acima (ex: pele de plástico, assimetria, borrão)?
-            4. Veredito: Explique como a combinação do heatmap com os conceitos detectados confirma a classificação de "{classificacao_clip}".
+            2. Interpretação do Heatmap: Explique o que as áreas coloridas do overlay indicam sobre o foco do modelo.
+            3. Foco do Heatmap: Onde estão concentrados os pontos coloridos no Overlay? (Olhos, mãos, pele, fundo?).
+            4. Verificação de Defeitos: Olhando para a imagem original nessas áreas, você confirma a presença dos defeitos listados em {texto_conceitos}?
+            . Veredito: Explique como a combinação do heatmap com os conceitos detectados confirma a classificação de "{classificacao_clip}".
         """
-
+        
         # -------- REQUISIÇÃO OPENROUTER --------
         url = "https://openrouter.ai/api/v1/chat/completions"
 

@@ -30,7 +30,7 @@ class LLaVAModel:
             print(f"Erro ao verificar modelo LLaVA: {e}")
             raise
 
-    def analisar_imagens(self, imagem_original, heatmap, classificacao_clip, probabilidade_clip, conceitos_detectados=None):
+    def analisar_imagens(self, imagem_original, heatmap, classificacao_clip, probabilidade_clip, conceitos_detectados=None, color_overlay="vermelho"):
         """
         Analisa a imagem original e o heatmap usando LLaVA-7B.
         Agora inclui os 'conceitos_detectados' (Concept Bottleneck) como evidência.
@@ -76,26 +76,33 @@ class LLaVAModel:
             """
 
         try:
-            # Prompt atualizado com a injeção dos conceitos
             prompt = f"""
-                VOCÊ É UM ASSISTENTE DE ANÁLISE VISUAL FOCADO EM DETALHES FORENSES.
+                VOCÊ É UM PERITO FORENSE DIGITAL SÊNIOR.
                 
-                Sua tarefa é analisar DUAS imagens para explicar uma detecção de IA:
-                1. A Imagem Original (Retrato/Cena).
-                2. O Overlay (Sobreposição): Mapa de calor onde pontos COLORIDOS/BRILHANTES indicam anomalias.
-    
-                CONTEXTO GERAL:
-                Classificação do Detector: "{classificacao_clip}" ({probabilidade_clip:.1%} de certeza).
+                Sua tarefa é cruzar dados visuais e semânticos para explicar uma detecção de IA.
                 
-                {texto_conceitos}
-                
-                INSTRUÇÃO: Responda em PORTUGUÊS seguindo a lista abaixo.
+                DADOS DE ENTRADA:
+                1. Imagem Original.
+                2.  **Overlay (Capa de Chuva)**: É a imagem original contendo Uma NÉVOA / MANCHA, de cor {color_overlay}
+                indicando as regiões que o detector considerou importantes.
 
-                1. O que você vê na imagem original? (Descreva brevemente a cena/pessoa).
-                2. Onde estão concentrados os pontos coloridos no Overlay? (Ex: Olhos, mãos, fundo, cabelo).
-                3. Olhando para a imagem original nessas áreas destacadas, a textura parece natural?
-                   - Se a lista acima mencionou defeitos (ex: 'waxy skin', 'deformed hands'), confirme se você os vê nessas áreas.
-                4. Conclusão: Como os pontos do heatmap e os defeitos listados confirmam a classificação de "{classificacao_clip}"?
+                CONTEXTO GERAL:
+                Classificação: "{classificacao_clip}" ({probabilidade_clip:.1%} de certeza).
+
+                {texto_conceitos}
+                    
+                **DIRETRIZ DE SEGURANÇA (IMPORTANTE):**
+                - A lista de conceitos acima é uma indicação do que o detector semântico encontrou.
+                - Se a imagem for REAL, a tendencia é que a lista possa estar vazia ou conter "falsos positivos" (ruído). **NÃO INVENTE DEFEITOS** só para concordar com a lista.
+                - Se a imagem for FAKE, a lista provavelmente indica o erro exato. Use-a como guia.
+
+                INSTRUÇÃO: Responda em PORTUGUÊS, de forma técnica e direta.
+
+                1. Análise da Cena: Descreva brevemente o sujeito e o ambiente da imagem original.
+                2. Interpretação do Heatmap: Explique o que as áreas coloridas do overlay indicam sobre o foco do modelo.
+                3. Foco do Heatmap: Onde estão concentrados os pontos coloridos no Overlay? (Olhos, mãos, pele, fundo?).
+                4. Verificação de Defeitos: Olhando para a imagem original nessas áreas, você confirma a presença dos defeitos listados em {texto_conceitos}?
+                . Veredito: Explique como a combinação do heatmap com os conceitos detectados confirma a classificação de "{classificacao_clip}".
             """
             
             # Envia as duas imagens para o LLaVA usando base64
