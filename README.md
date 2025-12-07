@@ -49,23 +49,23 @@ MegaTruth/
 │   ├── logo/                   # Assets visuais do projeto
 │   └── uploaded/               # Imagens enviadas pelos usuários via Interface
 │
-├── notebooks/                  # Pesquisa e Desenvolvimento (R&D)
-│   ├── clip-finetunning.ipynb          # Treinamento do classificador especialista (LoRA)
+├── notebooks/                  # Pesquisa e Desenvolvimento 
+│   ├── clip-finetunning.ipynb          # Fine-tuning do classificador especialista (clip)
 │   └── concept_bottleneck_eval.ipynb   # Validação da sensibilidade semântica (Base vs Tuned)
 │
 ├── outputs/
-│   ├── heatmaps/               # Máscaras de evidência geradas temporariamente
+│   ├── evidence_masks/         # Máscaras de evidência geradas temporariamente
 │   └── reports/                # Logs e transcrições de execução
 │
 ├── src/
 │   ├── models/                 # O "Cérebro" do sistema
-│   │   ├── clip_finetuned/     # Pesos do modelo treinado
+│   │   ├── clip_finetuned/     # pasta contendo arquivos do clip fine-tuned
 │   │   ├── config/             # Configurações de conhecimento
-│   │   │   ├── anchors.txt     # Mapeamento Conceito -> Objeto Visual
-│   │   │   └── concepts.txt    # Lista de defeitos de IA conhecidos
-│   │   ├── vision_model_clip.py        # Motor Visual (Detecção + Segmentação)
-│   │   ├── multimodal_model_llava.py   # Motor Textual Local
-│   │   └── multimodal_model_nemotron.py # Motor Textual Nuvem (SOTA)
+│   │   │   ├── anchors.txt     # Mapeamento Conceito -> Objeto Visual para o clip no heatmap
+│   │   │   └── concepts.txt    # Lista de defeitos de IA conhecidos para o clip no concept bottleneck
+│   │   ├── vision_model_clip.py           # modelo de visão (classificação + concept bottleneck + mapa de calor)
+│   │   ├── multimodal_model_llava.py      # modelo multimodal local (Explicação da classificação)
+│   │   └── multimodal_model_nemotron.py   # modelo multimodal Nuvem (via API da Open Router - explicação da classificação)
 │   │
 │   ├── test/                   # Scripts de Teste e Debug
 │   │   ├── main_app_llava_test.py
