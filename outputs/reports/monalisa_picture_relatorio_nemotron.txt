@@ -1,0 +1,46 @@
+RELATÓRIO DE ANÁLISE FORENSE - MEGATRUTH (NUVEM)
+                ==================================================================
+                ARQUIVO: images/AI/monalisa_picture.jpg
+                DATA:    07/12/2025 03:21:32
+                MODELO:  NVIDIA Nemotron-12B (OpenRouter API)
+                ==================================================================
+
+                1. RESULTADOS TÉCNICOS (Detector)
+                ---------------------------------
+                Classificação:   IMAGEM GERADA POR IA
+                Grau de Certeza: 99.85%
+                Heatmap (Foco):  C:\Users\joaov\OneDrive\Documentos\GitHub\MegaTruth\outputs\heatmaps\monalisa_picture.jpg_clipseg.png
+
+                2. ANÁLISE SEMÂNTICA (Defeitos Específicos - Concept Bottleneck)
+                ----------------------------------------------------------------
+                O sistema verificou a presença de anomalias físicas e lógicas.
+                Conceitos encontrados (acima de 10% de confiança):
+
+                - oil painting filter effect (47.8%)
+- jpeg compression artifacts (18.7%)
+
+                3. PARECER PERICIAL (Nemotron Vision)
+                -------------------------------------
+                **1. Análise da Cena (Imagem Original):**  
+A imagem original representa o retrato de uma mulher (a Mona Lisa) com características realistas, como pele detalhada, expressão suave e olhos realistas. O fundo é um paisagem de um vão fluvial cercado por rochedos e montanhas levemente nebulosas, típica do estilo renascentista. A iluminação é suave e a paleta de cores inclui tons de verde, azul e marrom, contrastando com o preto e dourado do quadro e impasto.  
+
+**2. Interpretação do Heatmap:**  
+O overlay vermelho (rain overlay) indica as regiões que o modelo de detecção de IA considerou mais desconcertantes para sua autenticidade. As cores intensas destacam áreas com maior probabilidade de conter defeitos gerados por algoritmos, como inconsistências de textura, artefatos ou falta de coesão estrutural.  
+
+**3. Foco do Heatmap:**  
+Os pontos coloridos estão concentrados:  
+- **Rosto:** Especificamente nos olhos, nariz e boca, com leves descontínuos na diminuição do olhar e na suavização da pele.  
+- **Mãos:** Apesar de parecerem cruzar com naturalidade, há sinais de duplicação subliminar e falta de clareza nos galhos.  
+- **Fundo:** Nas cristas das montanhas e no vão fluvial, com fundos desfocados e alinhamentos irregulares.  
+
+**4. Verificação de Defeitos:**  
+- **'Oil Painting Filter Effect' (47,8%):** Nas áreas coloridas do overlay (rosto e mãos), há texturas excessivamente fundidas e esfumadas, típicas de filtros de pintura a óleo aplicados digitalmente. Por exemplo, os traços nas rugas do vestido e nas sombras da saia parecem "smeared", como se tivessem sido suavizados artificialmente.  
+- **'JPEG Compression Artifacts' (18,7%):** Observados principalmente nas bordas do quadro e em partes do vestido (esquerda do braço), onde há blocos ou borrões discretos, indicando compressão de alta intensidade, característica de imagens digitais manipuladas.  
+
+**5. Veredito:**  
+A combinação do heatmap e os defeitos detectados confirma a classificação de "Imagem Gerada por IA". O foco do modelo nas áreas com artefatos visuais (fundo, rosto, mãos) demonstra que o algoritmo identificou padrões inconsistentes com a pintura clássica manuscrita. O "oil painting filter effect" sugere uma tentativa de imitar técnicas tradicionais, enquanto a compressão JPEG indica alterações digitais pós-criação, comuns em imagens sintéticas. Esses elementos, alinhados à ausência de coesão estrutural no fundo e na anatomia, validam a probabilidade de 99,9% de detecção de IA.
+
+
+                ==================================================================
+                Fim do Relatório
+                

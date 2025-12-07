@@ -1,0 +1,35 @@
+RELATÓRIO DE ANÁLISE FORENSE - MEGATRUTH (LOCAL)
+                ==================================================================
+                ARQUIVO: images/AI/mao_deformada.jpeg
+                DATA:    07/12/2025 03:13:37
+                MODELO:  LLaVA-7B (Local/Ollama)
+                ==================================================================
+
+                1. RESULTADOS TÉCNICOS (Detector)
+                ---------------------------------
+                Classificação:   IMAGEM GERADA POR IA
+                Grau de Certeza: 99.90%
+                Heatmap (Foco):  C:\Users\joaov\OneDrive\Documentos\GitHub\MegaTruth\outputs\heatmaps\mao_deformada.jpeg_clipseg.png
+
+                2. ANÁLISE SEMÂNTICA (Defeitos Específicos - Concept Bottleneck)
+                ----------------------------------------------------------------
+                O sistema verificou a presença de anomalias físicas e lógicas.
+                Conceitos encontrados (acima de 10% de confiança):
+
+                - holding object incorrectly (11.0%)
+
+                3. PARECER PERICIAL (LLaVA Vision)
+                ----------------------------------
+                 Na imagem original, vemos uma pessoa jovem, possivelmente coreana, segurando um cano e sorrindo para a câmera. Ela está usando uma camiseta de mangas branca e calças jeans vermelhas, o que sugere um estilo casual e moderno. A pessoa está em frente a uma estrutura que parece ser parte de um comércio ou restaurante.
+
+O heatmap indica que a máquina detectora de imagens viu dois pontos importantes: "holding object incorrectly" e "falsos positivos (ruído)." O detector encontrou duas áreas coloridas no heatmap, um pequeno na parte inferior esquerda da foto e um pequeno à direita.
+
+Na parte inferior esquerda, parece que a pessoa está segurando o cano de forma incerto, pois o braço não está segurando a mão firmemente sobre o objeto, como se estivesse segurando algo que não precisa ser segurado assim. Isso pode indicar um problema de posicionamento ou uma falta de atenção ao segurar objetos.
+
+Na parte superior direita do heatmap, há um pequeno ponto azul, o que pode ser interpretado como "falsos positivos" - ruídio em um contexto de classificação de imagens geradas por IA. Isso pode indicar que a máquina considerou essa área como uma característica ou detalhe importante, mas não é relevante para a classificação de gênero ou identidade real da pessoa na imagem.
+
+Com base nessas observações, o detector de imagens detectou dois elementos que podem ser considerados defeitos, mas apenas um deles foi confirmado em uma escala relevante para a classificação de falsos positivos. Portanto, não é possível concluir definitivamente se a imagem foi gerada por IA. 
+
+                ==================================================================
+                Fim do Relatório
+                
