@@ -34,16 +34,16 @@ if __name__ == "__main__":
         print("\n🔍 FASE 1 - Análise Técnica (Visual e Semântica)")
         print("-" * 50)
         
-        # 1.1. Detecção Visual e Heatmap
+        # 1.1. Detecção Visual e defect_map
         print("Inicializando CLIP (Detector)...")
         clip_model = CLIPAIModel() 
         
         print(f"Analisando imagem: {imagem_path}")
-        resultado_clip = clip_model.predict_with_heatmap(imagem_path)
+        resultado_clip = clip_model.predict_with_defect_map(imagem_path)
         
         print(f"   -> Classificação: {resultado_clip['label'].upper()}")
         print(f"   -> Confiança:     {resultado_clip['probability']:.2%}")
-        print(f"   -> Heatmap salvo: {resultado_clip['overlay_path']}")
+        print(f"   -> defect_map salvo: {resultado_clip['overlay_path']}")
 
         # 1.2. Análise de Conceitos (Concept Bottleneck - Lista V3)
         print("\nExecutando varredura de defeitos específicos (Concept Bottleneck)...")
@@ -71,7 +71,7 @@ if __name__ == "__main__":
         # Chama o LLaVA passando o Overlay E a lista de Conceitos
         analise_final = llava_model.analisar_imagens(
             imagem_original=imagem_path,
-            heatmap=resultado_clip["overlay_path"], 
+            defect_map=resultado_clip["overlay_path"],
             classificacao_clip=resultado_clip["label"],
             probabilidade_clip=resultado_clip["probability"],
             conceitos_detectados=conceitos, 
@@ -104,7 +104,7 @@ if __name__ == "__main__":
                 ---------------------------------
                 Classificação:   {resultado_clip['label'].upper()}
                 Grau de Certeza: {resultado_clip['probability']:.2%}
-                Heatmap (Foco):  {os.path.abspath(resultado_clip['overlay_path'])}
+                defect_map (Foco):  {os.path.abspath(resultado_clip['overlay_path'])}
 
                 2. ANÁLISE SEMÂNTICA (Defeitos Específicos - Concept Bottleneck)
                 ----------------------------------------------------------------

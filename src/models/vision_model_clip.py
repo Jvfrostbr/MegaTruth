@@ -55,7 +55,7 @@ class CLIPAIModel:
              self.model_base = self.model_tuned
              self.proc_base = self.proc_tuned
 
-        # 4. CLIPSeg (O Desenhista - Heatmaps Precisos)
+        # 4. CLIPSeg (O Desenhista - defect_maps Precisos)
         print("🎨 Carregando CLIPSeg (Segmentação Visual)...")
         try:
             self.seg_processor = CLIPSegProcessor.from_pretrained("CIDAS/clipseg-rd64-refined", use_fast=True)
@@ -141,14 +141,14 @@ class CLIPAIModel:
             
         return final_mask
 
-    def predict_with_heatmap(self, image_path, overlay_color="red"):
+    def predict_with_defect_map(self, image_path, overlay_color="red"):
         """
-        Pipeline principal: Classifica -> Analisa Conceitos -> Gera Heatmap -> Traduz Saída.
+        Pipeline principal: Classifica -> Analisa Conceitos -> Gera defect_map -> Traduz Saída.
         Args:
             image_path (str): Caminho da imagem.
             overlay_color (str): 'red', 'green', ou 'blue'. Define a cor da mancha.
         """
-        os.makedirs("outputs/heatmaps", exist_ok=True)
+        os.makedirs("outputs/defect_maps", exist_ok=True)
         image = Image.open(image_path).convert("RGB")
         
         # --- 1. Classificação (Tuned - Inglês) ---
@@ -191,47 +191,51 @@ class CLIPAIModel:
                 seg_prompts = [visual_target]
 
         # --- 3. Geração da Máscara ---
-        print(f"   >>> Gerando Segmentação para: {seg_prompts}")
-        heatmap = self._generate_segmentation(image, seg_prompts)
+        if seg_prompts is None or len(seg_prompts) == 0:
+            print(f"   >>> Gerando Segmentação para: {seg_prompts}")
+            defect_map = self._generate_segmentation(image, seg_prompts)
 
-        # --- 4. Pós-Processamento Visual ---
-        heatmap_min = np.min(heatmap)
-        heatmap_max = np.max(heatmap)
-        if heatmap_max > heatmap_min:
-             heatmap = (heatmap - heatmap_min) / (heatmap_max - heatmap_min)
+            # --- 4. Pós-Processamento Visual ---
+            defect_map_min = np.min(defect_map)
+            defect_map_max = np.max(defect_map)
+            if defect_map_max > defect_map_min:
+                defect_map = (defect_map - defect_map_min) / (defect_map_max - defect_map_min)
+            else:
+                defect_map = np.zeros_like(defect_map)
+            
+            defect_map[defect_map < 0.35] = 0
+            defect_map_smooth = cv2.GaussianBlur(defect_map, (15, 15), 0)
+
+            # --- 5. GERAÇÃO DO OVERLAY COLORIDO ---
+            img_np = np.array(image)
+            color_mask = np.zeros_like(img_np)
+            
+            # Define a cor da máscara (RGB aqui, pois o PIL abriu como RGB)
+            if overlay_color == "green":
+                color_mask[:, :, 1] = 255  # Canal G (Verde)
+            elif overlay_color == "blue":
+                color_mask[:, :, 2] = 255  # Canal B (Azul)
+            else: # Default: Red
+                color_mask[:, :, 0] = 255  # Canal R (Vermelho)
+            
+            img_float = img_np.astype(np.float32) / 255.0
+            mask_float = color_mask.astype(np.float32) / 255.0
+            alpha = defect_map_smooth[:, :, None]
+            
+            # Mistura: (Cor * alpha) + (Imagem * (1 - alpha*0.3))
+            # O fator 0.3 no alpha negativo mantém a imagem original visível por baixo
+            overlay = (mask_float * alpha * 0.6) + (img_float * (1.0 - (alpha * 0.3)))
+            overlay = np.clip(overlay * 255, 0, 255).astype(np.uint8)
+            
+            # Converte RGB -> BGR para o OpenCV salvar corretamente
+            overlay_bgr = cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR)
+            
+            base = os.path.basename(image_path)
+            overlay_path = f"outputs/defect_maps/{base}_clipseg.png"
+            cv2.imwrite(overlay_path, overlay_bgr)
+            
         else:
-             heatmap = np.zeros_like(heatmap)
-        
-        heatmap[heatmap < 0.35] = 0 
-        heatmap_smooth = cv2.GaussianBlur(heatmap, (15, 15), 0)
-
-        # --- 5. GERAÇÃO DO OVERLAY COLORIDO ---
-        img_np = np.array(image)
-        color_mask = np.zeros_like(img_np)
-        
-        # Define a cor da máscara (RGB aqui, pois o PIL abriu como RGB)
-        if overlay_color == "green":
-            color_mask[:, :, 1] = 255  # Canal G (Verde)
-        elif overlay_color == "blue":
-            color_mask[:, :, 2] = 255  # Canal B (Azul)
-        else: # Default: Red
-            color_mask[:, :, 0] = 255  # Canal R (Vermelho)
-        
-        img_float = img_np.astype(np.float32) / 255.0
-        mask_float = color_mask.astype(np.float32) / 255.0
-        alpha = heatmap_smooth[:, :, None]
-        
-        # Mistura: (Cor * alpha) + (Imagem * (1 - alpha*0.3))
-        # O fator 0.3 no alpha negativo mantém a imagem original visível por baixo
-        overlay = (mask_float * alpha * 0.6) + (img_float * (1.0 - (alpha * 0.3)))
-        overlay = np.clip(overlay * 255, 0, 255).astype(np.uint8)
-        
-        # Converte RGB -> BGR para o OpenCV salvar corretamente
-        overlay_bgr = cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR)
-        
-        base = os.path.basename(image_path)
-        overlay_path = f"outputs/heatmaps/{base}_clipseg.png"
-        cv2.imwrite(overlay_path, overlay_bgr)
+            overlay_path = image_path  # Sem overlay gerado
 
         # --- 6. TRADUÇÃO PARA SAÍDA (PT-BR) ---
         label_pt = self.classes_pt_map.get(label_eng, label_eng)
@@ -247,7 +251,7 @@ class CLIPAIModel:
             "label": label_pt,
             "probability": prob, 
             "probabilities": probs_pt,
-            "heatmap_path": overlay_path,
+            "defect_map_path": overlay_path,
             "overlay_path": overlay_path, 
             "conceitos": conceitos_pt,
             "color_used": overlay_color 

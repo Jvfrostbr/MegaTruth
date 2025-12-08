@@ -30,9 +30,9 @@ class LLaVAModel:
             print(f"Erro ao verificar modelo LLaVA: {e}")
             raise
 
-    def analisar_imagens(self, imagem_original, heatmap, classificacao_clip, probabilidade_clip, conceitos_detectados=None, color_overlay="vermelho"):
+    def analisar_imagens(self, imagem_original, defect_map, classificacao_clip, probabilidade_clip, conceitos_detectados=None, color_overlay="vermelho"):
         """
-        Analisa a imagem original e o heatmap usando LLaVA-7B.
+        Analisa a imagem original e o defect_map usando LLaVA-7B.
         Agora inclui os 'conceitos_detectados' (Concept Bottleneck) como evidência.
         """
         
@@ -40,21 +40,21 @@ class LLaVAModel:
         if not os.path.exists(imagem_original):
             raise FileNotFoundError(f"Imagem original não encontrada: {imagem_original}")
             
-        if not os.path.exists(heatmap):
-            raise FileNotFoundError(f"Heatmap não encontrado: {heatmap}")
+        if not os.path.exists(defect_map):
+            raise FileNotFoundError(f"defect_map não encontrado: {defect_map}")
         
         # Lê os arquivos como bytes
         with open(imagem_original, 'rb') as f:
             image_original_bytes = f.read()
-        with open(heatmap, 'rb') as f:
-            heatmap_bytes = f.read()
+        with open(defect_map, 'rb') as f:
+            defect_map_bytes = f.read()
 
         # Converter para base64 para garantir compatibilidade
         image_original_b64 = base64.b64encode(image_original_bytes).decode('utf-8')
-        heatmap_b64 = base64.b64encode(heatmap_bytes).decode('utf-8')
+        defect_map_b64 = base64.b64encode(defect_map_bytes).decode('utf-8')
         
         print(f"📸 Imagem original: {len(image_original_bytes)} bytes")
-        print(f"🔥 Heatmap: {len(heatmap_bytes)} bytes")
+        print(f"🔥 defect_map: {len(defect_map_bytes)} bytes")
 
         print("Analisando imagens com LLaVA-7B...")
         
@@ -72,7 +72,7 @@ class LLaVAModel:
             O detector identificou os seguintes padrões visuais específicos nesta imagem:
             {lista_str}
             
-            > USE ESTA LISTA COMO GUIA: Verifique se esses defeitos específicos aparecem nas áreas coloridas do heatmap.
+            > USE ESTA LISTA COMO GUIA: Verifique se esses defeitos específicos aparecem nas áreas coloridas do defect_map.
             """
 
         try:
@@ -99,10 +99,10 @@ class LLaVAModel:
                 INSTRUÇÃO: Responda em PORTUGUÊS, de forma técnica e direta.
 
                 1. Análise da Cena: Descreva brevemente o sujeito e o ambiente da imagem original.
-                2. Interpretação do Heatmap: Explique o que as áreas coloridas do overlay indicam sobre o foco do modelo.
-                3. Foco do Heatmap: Onde estão concentrados os pontos coloridos no Overlay? (Olhos, mãos, pele, fundo?).
+                2. Interpretação do defect_map: Explique o que as áreas coloridas do overlay indicam sobre o foco do modelo.
+                3. Foco do defect_map: Onde estão concentrados os pontos coloridos no Overlay? (Olhos, mãos, pele, fundo?).
                 4. Verificação de Defeitos: Olhando para a imagem original nessas áreas, você confirma a presença dos defeitos listados em {texto_conceitos}?
-                . Veredito: Explique como a combinação do heatmap com os conceitos detectados confirma a classificação de "{classificacao_clip}".
+                . Veredito: Explique como a combinação do defect_map com os conceitos detectados confirma a classificação de "{classificacao_clip}".
             """
             
             # Envia as duas imagens para o LLaVA usando base64
@@ -112,7 +112,7 @@ class LLaVAModel:
                     {
                         'role': 'user',
                         'content': prompt,
-                        'images': [image_original_b64, heatmap_b64]
+                        'images': [image_original_b64, defect_map_b64]
                     }
                 ]
             )
