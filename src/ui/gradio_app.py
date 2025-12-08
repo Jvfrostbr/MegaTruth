@@ -303,7 +303,7 @@ def build_ui():
             
             with col1:                
                 defect_map_display = gr.Image(
-                    label="Pontos de Interesse (defect_map)",
+                    label="Indicador dos defeitos Visuais",
                     interactive=False,
                     width=600,
                     height=400
@@ -319,7 +319,7 @@ def build_ui():
                 )
          
         # ========== SEÇÃO DE EXPLICAÇÃO ==========
-        gr.Markdown("### 3. Parecer Pericial (IA Generativa)")
+        gr.Markdown("### 3. Parecer Pericial (llava / Nemotron)")
         
         explain_btn = gr.Button(
             "Gerar Laudo Explicativo",
