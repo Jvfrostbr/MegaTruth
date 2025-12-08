@@ -68,7 +68,7 @@ def save_uploaded_image(img):
 def analyze_image(image, overlay_color):
     """Analisa imagem com CLIP e gera heatmap na cor escolhida."""
     if image is None:
-        return None, "❌ Erro", "Nenhuma imagem enviada", "", None, None
+        return None, "Erro", "Nenhuma imagem enviada", "", None, None
     
     try:
         img_path = save_uploaded_image(image)
@@ -83,7 +83,7 @@ def analyze_image(image, overlay_color):
         selected_code = color_map.get(overlay_color, "red")
 
         clip = get_clip()
-        print(f"📊 Analisando com CLIP (Overlay: {selected_code})...")
+        print(f" Analisando com CLIP (Overlay: {selected_code})...")
         
         # Passa a cor para o modelo
         result = clip.predict_with_heatmap(img_path, overlay_color=selected_code)
@@ -99,13 +99,13 @@ def analyze_image(image, overlay_color):
         else:
             conceitos_text = "Nenhum defeito específico detectado"
         
-        status_msg = f"✅ Análise CLIP concluída\n🏷️ {label}\n📈 Confiança: {prob:.2%}"
+        status_msg = f"Análise CLIP concluída\n {label}\n Confiança: {prob:.2%}"
         
         return img_path, label, f"{prob:.2%}", conceitos_text, overlay_path, status_msg
 
     except Exception as e:
-        print(f"❌ Erro na análise: {e}")
-        return None, "❌ Erro", str(e), "", None, f"❌ Erro: {str(e)}"
+        print(f"Erro na análise: {e}")
+        return None, "Erro", str(e), "", None, f"Erro: {str(e)}"
 
 
 def explain_with_multimodal(image_path, overlay_path, clip_label, clip_prob_str, conceitos_text, overlay_color):
@@ -117,10 +117,10 @@ def explain_with_multimodal(image_path, overlay_path, clip_label, clip_prob_str,
 
     try:
         if not image_path or not overlay_path:
-            return "❌ Erro: Imagem ou overlay não disponível. Execute a análise CLIP primeiro."
+            return "Erro: Imagem ou overlay não disponível. Execute a análise CLIP primeiro."
 
         if not os.path.exists(image_path) or not os.path.exists(overlay_path):
-            return "❌ Erro: Arquivos de imagem ou overlay não encontrados."
+            return "rro: Arquivos de imagem ou overlay não encontrados."
 
         # --- 1. Preparar Dados (Parsing) ---
         # Limpar a probabilidade (remover %)
@@ -194,7 +194,7 @@ def explain_with_multimodal(image_path, overlay_path, clip_label, clip_prob_str,
                     model_used = "LLaVA-7B (Local Ollama)"
 
             except Exception as e:
-                return f"❌ Erro Crítico: Ambos os modelos falharam.\nNemotron: (Vide logs)\nLLaVA: {str(e)}"
+                return f"rro Crítico: Ambos os modelos falharam.\nNemotron: (Vide logs)\nLLaVA: {str(e)}"
 
         # --- 4. Resultado Final ---
         if response_text:
@@ -202,23 +202,70 @@ def explain_with_multimodal(image_path, overlay_path, clip_label, clip_prob_str,
             return header + response_text
 
         else:
-            return "⚠️ Erro desconhecido: O modelo retornou uma resposta vazia."
+            return "Erro desconhecido: O modelo retornou uma resposta vazia."
 
     except Exception as e:
-        print(f"❌ Erro geral: {e}")
-        return f"❌ Erro ao gerar explicação: {str(e)}"
+        print(f"Erro geral: {e}")
+        return f"Erro ao gerar explicação: {str(e)}"
 
 
 def build_ui():
     with gr.Blocks(title="MegaTruth — Detecção de IA em Imagens") as demo:
-        
+
+        custom_css = """
+        :root {
+            --primary-500: #00baff;
+            --primary-600: #009ecf;
+            --primary-700: #007fa8;
+        }
+
+        /* Botões primários */
+        button.primary {
+            background-color: #00baff !important;
+            border-color: #00baff !important;
+        }
+
+        /* Botão hover */
+        button.primary:hover {
+            background-color: #009ecf !important;
+            border-color: #009ecf !important;
+        }
+
+        /* Radio / checkbox selecionados */
+        input[type="radio"]:checked {
+            accent-color: #00baff;
+        }
+
+        /* Barra de progresso */
+        progress::-webkit-progress-value {
+            background-color: #00baff;
+        }
+        """
+
+        gr.HTML(f"""
+        <style>
+        {custom_css}
+        </style>
+        """)
+
+        # Cabeçalho com logo
         gr.Markdown("""
-        # 👁️ MegaTruth — Sistema Forense de Detecção de IA
-        **1. Análise Visual:** O modelo **CLIP (Fine-Tuned)** detecta anomalias e gera um *Heatmap*.
-        **2. Análise Semântica:** O sistema verifica **Conceitos Específicos** (anatomia, física).
-        **3. Parecer Pericial:** Uma **IA Multimodal** gera o laudo final.
+        <div style="display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 20px;">
+            <img src="https://raw.githubusercontent.com/Jvfrostbr/MegaTruth/main/images/logo/logo_mega_truth.png" alt="MegaTruth Logo" style="width: 150px; height: auto;">
+            <div>
+                <h1 style="margin: 0; padding: 0;">MegaTruth</h1>
+                <h3 style="margin: 5px 0; padding: 0; color: #666;">Sistema Forense de Detecção de IA</h3>
+                <p style="margin: 10px 0; padding: 0; font-size: 0.95em;">
+                    <strong>1. Análise Visual:</strong> O modelo <strong>CLIP (Fine-Tuned)</strong> detecta anomalias e gera um <em>Heatmap</em>.<br>
+                    <strong>2. Análise Semântica:</strong> O sistema verifica <strong>Conceitos Específicos</strong> (anatomia, física).<br>
+                    <strong>3. Parecer Pericial:</strong> Uma <strong>IA Multimodal</strong> gera o laudo final.
+                </p>
+            </div>
+        </div>
         """)
         
+        gr.Markdown("---")
+
         # ========== SEÇÃO DE ENTRADA ==========
         gr.Markdown("### 1. Upload de Imagem")
         
@@ -227,7 +274,9 @@ def build_ui():
                 image_input = gr.Image(
                     type="pil",
                     label="Envie sua imagem",
-                    sources=["upload", "clipboard"]
+                    sources=["upload", "clipboard"],
+                    width=600,
+                    height=400
                 )
             
             with gr.Column(scale=1):
@@ -240,11 +289,11 @@ def build_ui():
                 )
                 
                 analyze_btn = gr.Button(
-                    "🔍 Analisar Imagem",
+                    "Analisar Imagem",
                     size="lg",
                     variant="primary"
                 )
-                status_display = gr.Markdown("⏳ Aguardando envio...")
+                status_display = gr.Markdown("Aguardando envio...")
         
         # ========== SEÇÃO DE RESULTADOS CLIP ==========
         gr.Markdown("### 2. Resultados Técnicos (Detector)")
@@ -254,15 +303,17 @@ def build_ui():
             
             with col1:                
                 heatmap_display = gr.Image(
-                    label="Mapa de Calor (Atenção do Modelo)",
-                    interactive=False
+                    label="Pontos de Interesse (Heatmap)",
+                    interactive=False,
+                    width=600,
+                    height=400
                 )
             
             with col2:
                 label_display = gr.Textbox(label="Classificação", interactive=False)
-                prob_display = gr.Textbox(label="📈 Grau de Certeza", interactive=False)
+                prob_display = gr.Textbox(label="Grau de Certeza", interactive=False)
                 conceitos_display = gr.Textbox(
-                    label="⚠️ Defeitos Específicos Detectados",
+                    label="Defeitos Específicos Detectados",
                     interactive=False,
                     lines=4
                 )
@@ -271,16 +322,13 @@ def build_ui():
         gr.Markdown("### 3. Parecer Pericial (IA Generativa)")
         
         explain_btn = gr.Button(
-            "📝 Gerar Laudo Explicativo",
+            "Gerar Laudo Explicativo",
             size="lg",
             variant="secondary"
         )
         
-        explanation_display = gr.Textbox(
-            label="Laudo Final",
-            lines=15,
-            interactive=False,
-            show_copy_button=True
+        explanation_display = gr.Markdown(
+            value="Aguardando análise..."
         )
         
         # ========== LÓGICA DE EVENTOS ==========
@@ -296,7 +344,7 @@ def build_ui():
             img_path, label, prob, conceitos, overlay_path, status = analyze_image(image, color)
             
             
-            return img_path, overlay_path, label, prob, conceitos, overlay_path, status, label, prob, conceitos, "⏳ Clique em 'Gerar Laudo'..."
+            return img_path, overlay_path, label, prob, conceitos, overlay_path, status, label, prob, conceitos, "Clique em 'Gerar Laudo'..."
         
         analyze_btn.click(
             fn=on_analyze,
@@ -309,7 +357,7 @@ def build_ui():
         
         def on_explain(img_path, overlay_path, label, prob, conceitos, color):
             if not img_path or not overlay_path:
-                return "⚠️ Erro: Execute a análise visual primeiro."
+                return "Erro: Execute a análise visual primeiro."
             return explain_with_multimodal(img_path, overlay_path, label, prob, conceitos, overlay_color=color)
         
         explain_btn.click(
@@ -326,9 +374,13 @@ if __name__ == "__main__":
     print("🚀 MegaTruth Interface Iniciada")
     print("="*60)
     
+    # Caminho do favicon
+    favicon_path = os.path.join(os.path.dirname(__file__), "..", "..", "images", "logo", "logo_mega_truth.png")
+    
     app.launch(
         server_name="127.0.0.1",
         server_port=7860,
         share=True,
-        show_error=True
+        show_error=True,
+        favicon_path=favicon_path if os.path.exists(favicon_path) else None
     )
