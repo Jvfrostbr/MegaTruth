@@ -240,6 +240,36 @@ def build_ui():
         progress::-webkit-progress-value {
             background-color: #00baff;
         }
+
+        /* Caixa estilo textbox dark */
+        .laudo-box {
+            background: #1f2124;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            padding: 12px 14px;
+            min-height: 180px;
+            font-family: monospace;
+            color: #f0f0f0;
+            box-sizing: border-box;
+        }
+
+        /* Scroll interno bonito */
+        .laudo-box {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        /* Scrollbar (Chrome/Edge) */
+        .laudo-box::-webkit-scrollbar {
+            width: 8px;
+        }
+        .laudo-box::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+        .laudo-box::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 4px;
+        }
         """
 
         gr.HTML(f"""
@@ -258,7 +288,7 @@ def build_ui():
                 <p style="margin: 10px 0; padding: 0; font-size: 0.95em;">
                     <strong>1. Análise Visual:</strong> O modelo <strong>CLIP (Fine-Tuned)</strong> detecta anomalias e gera um <em>Heatmap</em>.<br>
                     <strong>2. Análise Semântica:</strong> O sistema verifica <strong>Conceitos Específicos</strong> (anatomia, física).<br>
-                    <strong>3. Parecer Pericial:</strong> Uma <strong>IA Multimodal</strong> gera o laudo final.
+                    <strong>3. Análise Multimodal:</strong> Uma <strong>IA Multimodal</strong> gera o laudo final.
                 </p>
             </div>
         </div>
@@ -303,7 +333,7 @@ def build_ui():
             
             with col1:                
                 heatmap_display = gr.Image(
-                    label="Pontos de Interesse (Heatmap)",
+                    label="Pontos de Interesse ('Heatmap')",
                     interactive=False,
                     width=600,
                     height=400
@@ -319,17 +349,24 @@ def build_ui():
                 )
          
         # ========== SEÇÃO DE EXPLICAÇÃO ==========
-        gr.Markdown("### 3. Parecer Pericial (IA Generativa)")
+        gr.Markdown("### 3. Análise Multimodal (Laudo Explicativo)")
         
         explain_btn = gr.Button(
             "Gerar Laudo Explicativo",
             size="lg",
-            variant="secondary"
+            variant="primary"
         )
         
+        # Indicador de carregamento
+        # loading_indicator = gr.HTML(
+        #     value='<div style="display:none; text-align:center;"><p>Carregando modelo multimodal...</p><div style="border: 4px solid #f3f3f3; border-top: 4px solid #00baff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto;"></div><style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style></div>'
+        # )
+        
         explanation_display = gr.Markdown(
-            value="Aguardando análise..."
+            value="Aguardando análise...",
+            elem_classes=["laudo-box"]
         )
+
         
         # ========== LÓGICA DE EVENTOS ==========
         
@@ -357,12 +394,14 @@ def build_ui():
         
         def on_explain(img_path, overlay_path, label, prob, conceitos, color):
             if not img_path or not overlay_path:
-                return "Erro: Execute a análise visual primeiro."
-            return explain_with_multimodal(img_path, overlay_path, label, prob, conceitos, overlay_color=color)
+                return "⚠️ Erro: Execute a análise visual primeiro."
+            
+            result = explain_with_multimodal(img_path, overlay_path, label, prob, conceitos, overlay_color=color)
+            return result
         
         explain_btn.click(
             fn=on_explain,
-            inputs=[state_image_path, state_overlay_path, state_label, state_prob, state_conceitos, color_selector], # Adicionado o input de cor
+            inputs=[state_image_path, state_overlay_path, state_label, state_prob, state_conceitos, color_selector],
             outputs=[explanation_display]
         )
     
