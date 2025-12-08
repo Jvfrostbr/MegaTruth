@@ -59,6 +59,8 @@ class NemotronVL:
             1. Imagem Original.
             2.  **Overlay (Capa de Chuva)**: É a imagem original contendo Uma NÉVOA / MANCHA, de cor {color_overlay}
             indicando as regiões que o detector considerou importantes.
+            3. Caso o overlay não contenha manchas de cor {color_overlay} e que o overlay é idêntico a imagem original,
+            considere que o detector não encontrou áreas relevantes, e nesse caso vc pode pular a pergunta  "3. Foco do defect_map".
 
             CONTEXTO GERAL:
             Classificação: "{classificacao_clip}" ({probabilidade_clip:.1%} de certeza).
