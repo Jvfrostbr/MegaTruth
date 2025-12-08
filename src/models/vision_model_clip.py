@@ -202,8 +202,21 @@ class CLIPAIModel:
             else:
                 defect_map = np.zeros_like(defect_map)
             
+            # limiarização de 0.35 para  reduzir o ruído e manter apenas as áreas mais relevantes
             defect_map[defect_map < 0.35] = 0
-            defect_map_smooth = cv2.GaussianBlur(defect_map, (15, 15), 0)
+
+            # --- SUAVIZAÇÃO ADAPTATIVA (Dinâmica) ---
+            h, w = defect_map.shape
+            # Define o kernel como 3% da menor dimensão da imagem
+            k_size = int(min(h, w) * 0.03)
+            
+            # O kernel precisa ser ímpar e ter tamanho mínimo de 3
+            if k_size % 2 == 0:
+                k_size += 1
+            if k_size < 3:
+                k_size = 3
+                
+            defect_map_smooth = cv2.GaussianBlur(defect_map, (k_size, k_size), 0)
 
             # --- 5. GERAÇÃO DO OVERLAY COLORIDO ---
             img_np = np.array(image)

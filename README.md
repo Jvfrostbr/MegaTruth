@@ -129,7 +129,7 @@ A partir daí, você já pode criar sua API Key.
 
 ---
 
-## 🔑 2. Como criar sua API Key no OpenRouter
+### 🔑 2. Como criar sua API Key no OpenRouter
 
 1. Entre no site: https://openrouter.ai  
 2. Clique em **Sign Up** (se ainda não tiver conta) ou **Sign In** (para entrar).  
