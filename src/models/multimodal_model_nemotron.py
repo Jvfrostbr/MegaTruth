@@ -20,15 +20,15 @@ class NemotronVL:
         with open(caminho, "rb") as f:
             return base64.b64encode(f.read()).decode("utf-8")
 
-    def analisar_imagens(self, imagem_original, heatmap, classificacao_clip, probabilidade_clip, conceitos_detectados=None, color_overlay="vermelho"):
+    def analisar_imagens(self, imagem_original, defect_map, classificacao_clip, probabilidade_clip, conceitos_detectados=None, color_overlay="vermelho"):
         """
-        Envia imagem original + heatmap + conceitos semânticos para o Nemotron.
+        Envia imagem original + defect_map + conceitos semânticos para o Nemotron.
         """
 
         print("Carregando imagens...")
         try:
             img1_b64 = self._carregar_imagem_base64(imagem_original)
-            img2_b64 = self._carregar_imagem_base64(heatmap)
+            img2_b64 = self._carregar_imagem_base64(defect_map)
         except Exception as e:
             print(f"Erro ao carregar imagens: {e}")
             return None
@@ -47,7 +47,7 @@ class NemotronVL:
             O detector identificou os seguintes padrões de defeito nesta imagem:
             {lista_str}
             
-            > USE ESTA LISTA COMO GUIA: Verifique se esses defeitos específicos aparecem nas áreas coloridas do heatmap.
+            > USE ESTA LISTA COMO GUIA: Verifique se esses defeitos específicos aparecem nas áreas coloridas do defect_map.
             """
 
         prompt = f"""
@@ -59,6 +59,8 @@ class NemotronVL:
             1. Imagem Original.
             2.  **Overlay (Capa de Chuva)**: É a imagem original contendo Uma NÉVOA / MANCHA, de cor {color_overlay}
             indicando as regiões que o detector considerou importantes.
+            3. Caso o overlay não contenha manchas de cor {color_overlay} e que o overlay é idêntico a imagem original,
+            considere que o detector não encontrou áreas relevantes, e nesse caso vc pode pular a pergunta  "3. Foco do defect_map".
 
             CONTEXTO GERAL:
             Classificação: "{classificacao_clip}" ({probabilidade_clip:.1%} de certeza).
@@ -73,10 +75,10 @@ class NemotronVL:
             INSTRUÇÃO: Responda em PORTUGUÊS, de forma técnica e direta.
 
             1. Análise da Cena: Descreva brevemente o sujeito e o ambiente da imagem original.
-            2. Interpretação do Heatmap: Explique o que as áreas coloridas do overlay indicam sobre o foco do modelo.
-            3. Foco do Heatmap: Onde estão concentrados os pontos coloridos no Overlay? (Olhos, mãos, pele, fundo?).
+            2. Interpretação do defect_map: Explique o que as áreas coloridas do overlay indicam sobre o foco do modelo.
+            3. Foco do defect_map: Onde estão concentrados os pontos coloridos no Overlay? (Olhos, mãos, pele, fundo?).
             4. Verificação de Defeitos: Olhando para a imagem original nessas áreas, você confirma a presença dos defeitos listados em {texto_conceitos}?
-            . Veredito: Explique como a combinação do heatmap com os conceitos detectados confirma a classificação de "{classificacao_clip}".
+            . Veredito: Explique como a combinação do defect_map com os conceitos detectados confirma a classificação de "{classificacao_clip}".
         """
         
         # -------- REQUISIÇÃO OPENROUTER --------

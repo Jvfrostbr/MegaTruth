@@ -24,7 +24,7 @@ load_dotenv()
 
 # Diretórios
 os.makedirs("images/uploaded", exist_ok=True)
-os.makedirs("outputs/heatmaps", exist_ok=True)
+os.makedirs("outputs/defect_maps", exist_ok=True)
 
 # Instâncias globais
 clip_model = None
@@ -66,7 +66,7 @@ def save_uploaded_image(img):
 
 # --- ATUALIZAÇÃO 1: Recebe a cor como parâmetro ---
 def analyze_image(image, overlay_color):
-    """Analisa imagem com CLIP e gera heatmap na cor escolhida."""
+    """Analisa imagem com CLIP e gera defect_map na cor escolhida."""
     if image is None:
         return None, "Erro", "Nenhuma imagem enviada", "", None, None
     
@@ -86,7 +86,7 @@ def analyze_image(image, overlay_color):
         print(f" Analisando com CLIP (Overlay: {selected_code})...")
         
         # Passa a cor para o modelo
-        result = clip.predict_with_heatmap(img_path, overlay_color=selected_code)
+        result = clip.predict_with_defect_map(img_path, overlay_color=selected_code)
         
         label = result.get("label", "N/A")
         prob = result.get("probability", 0.0)
@@ -164,7 +164,7 @@ def explain_with_multimodal(image_path, overlay_path, clip_label, clip_prob_str,
             
             response_text = nemotron.analisar_imagens(
                 imagem_original=image_path,
-                heatmap=overlay_path,
+                defect_map=overlay_path,
                 classificacao_clip=clip_label,
                 probabilidade_clip=prob_float,
                 conceitos_detectados=conceitos_dict if conceitos_dict else None,
@@ -184,7 +184,7 @@ def explain_with_multimodal(image_path, overlay_path, clip_label, clip_prob_str,
 
                 response_text = llava.analisar_imagens(
                     imagem_original=image_path,
-                    heatmap=overlay_path,
+                    defect_map=overlay_path,
                     classificacao_clip=clip_label,
                     probabilidade_clip=prob_float,
                     conceitos_detectados=conceitos_dict if conceitos_dict else None, 
@@ -286,7 +286,7 @@ def build_ui():
                 <h1 style="margin: 0; padding: 0;">MegaTruth</h1>
                 <h3 style="margin: 5px 0; padding: 0; color: #666;">Sistema Forense de Detecção de IA</h3>
                 <p style="margin: 10px 0; padding: 0; font-size: 0.95em;">
-                    <strong>1. Análise Visual:</strong> O modelo <strong>CLIP (Fine-Tuned)</strong> detecta anomalias e gera um <em>Heatmap</em>.<br>
+                    <strong>1. Análise Visual:</strong> O modelo <strong>CLIP (Fine-Tuned)</strong> detecta anomalias e gera um <em>defect_map</em>.<br>
                     <strong>2. Análise Semântica:</strong> O sistema verifica <strong>Conceitos Específicos</strong> (anatomia, física).<br>
                     <strong>3. Análise Multimodal:</strong> Uma <strong>IA Multimodal</strong> gera o laudo final.
                 </p>
@@ -314,7 +314,7 @@ def build_ui():
                 color_selector = gr.Radio(
                     choices=["🔴 Vermelho (Padrão)", "🟢 Verde (Para fundos avermelhados)", "🔵 Azul (Para fundos quentes)"],
                     value="🔴 Vermelho (Padrão)",
-                    label="Cor do Overlay (Heatmap)",
+                    label="Cor do Overlay (defect_map)",
                     info="Escolha uma cor que contraste com a imagem original."
                 )
                 
@@ -332,8 +332,8 @@ def build_ui():
             col1, col2 = gr.Column(), gr.Column()
             
             with col1:                
-                heatmap_display = gr.Image(
-                    label="Pontos de Interesse ('Heatmap')",
+                defect_map_display = gr.Image(
+                    label="Indicador dos defeitos Visuais",
                     interactive=False,
                     width=600,
                     height=400
@@ -388,7 +388,7 @@ def build_ui():
             inputs=[image_input, color_selector], # Adicionado o input de cor
             outputs=[
                 state_image_path, state_overlay_path, state_label, state_prob, state_conceitos,
-                heatmap_display, status_display, label_display, prob_display, conceitos_display, explanation_display
+                defect_map_display, status_display, label_display, prob_display, conceitos_display, explanation_display
             ]
         )
         

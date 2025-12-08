@@ -32,7 +32,7 @@ O sistema opera simulando o fluxo de trabalho de uma equipe forense:
 
 ### **4. O Perito (IA Generativa)**
 * **Local:** `src/models/multimodal_model_*.py`
-* **Tecnologia:** Híbrida. Usa **Nemotron-12B** (Via API/Nuvem) para máxima inteligência ou **LLaVA** (Local) como fallback.
+* **Tecnologia:** Híbrida. Usa **Nemotron-12B** (Via API/Nuvem) para máxima inteligência ou **LLaVA** (Local,via ollama) como fallback.
 * **Saída:** Um laudo textual detalhado cruzando os dados visuais com o contexto da imagem.
 
 ---
@@ -61,13 +61,13 @@ MegaTruth/
 │   ├── models/                 # O "Cérebro" do sistema
 │   │   ├── clip_finetuned/     # pasta contendo arquivos do clip fine-tuned
 │   │   ├── config/             # Configurações de conhecimento
-│   │   │   ├── anchors.txt     # Mapeamento Conceito -> Objeto Visual para o clip no heatmap
+│   │   │   ├── anchors.txt     # Mapeamento Conceito -> Objeto Visual para o clip no defect_map
 │   │   │   └── concepts.txt    # Lista de defeitos de IA conhecidos para o clip no concept bottleneck
 │   │   ├── vision_model_clip.py           # modelo de visão (classificação + concept bottleneck + mapa de calor)
 │   │   ├── multimodal_model_llava.py      # modelo multimodal local (Explicação da classificação)
 │   │   └── multimodal_model_nemotron.py   # modelo multimodal Nuvem (via API da Open Router - explicação da classificação)
 │   │
-│   ├── test/                   # Scripts de Teste e Debug
+│   ├── test/                   # Scripts de Teste e Debug dos modelos multimodais
 │   │   ├── main_app_llava_test.py
 │   │   └── main_app_nemotron_test.py
 │   │
@@ -107,7 +107,44 @@ pip install -r requirements.txt
 
 O sistema funciona offline com o LLaVA, mas para laudos periciais mais consistentes e de alta qualidade recomenda-se usar o Nemotron via OpenRouter.
 
-Crie um arquivo `.env` na raiz do projeto e adicione sua chave:
+Abaixo estão as instruções completas para criar sua chave e configurar o ambiente.
+
+---
+### **🌐 1. Criar uma conta no OpenRouter**
+
+Acesse o site oficial: 🔗 https://openrouter.ai
+
+Para criar sua conta:
+
+1. Clique em **Sign Up** no canto superior direito.
+2. Escolha como deseja se registrar:
+   - Google  
+   - GitHub  
+   - E-mail + senha
+3. Após o cadastro, confirme seu e-mail (caso solicitado).
+4. Faça login normalmente acessando **Sign In**.
+5. Depois de logado, você será direcionado ao painel principal (**Dashboard**).
+
+A partir daí, você já pode criar sua API Key.
+
+---
+
+## 🔑 2. Como criar sua API Key no OpenRouter
+
+1. Entre no site: https://openrouter.ai  
+2. Clique em **Sign Up** (se ainda não tiver conta) ou **Sign In** (para entrar).  
+3. Após logar, vá até a página:  
+   **API Keys → https://openrouter.ai/settings/keys**
+4. Clique em **Create Key**.  
+5. Escolha um nome para a chave (ex.: `nemotron-producao`)  
+6. Copie a chave gerada **imediatamente** — ela só aparece uma vez.  
+7. Guarde em local seguro e não compartilhe com ninguém.
+
+---
+
+### 🗂️ 3. Configurar o arquivo `.env`
+
+Crie um arquivo `.env` na raiz do projeto com:
 
 ```ini
 OPENROUTER_API_KEY="sua-chave-aqui"
@@ -138,7 +175,15 @@ A estrutura final deve ficar assim:
 ```bash
 src/
 └── models/                
-       └── clip_finetuned/     <---- PASTA DO CLIP FINE-TUNED
+       └── clip_finetuned/           <-------- PASTA DO CLIP FINE-TUNED
+                ├── config.json
+                ├── merges.txt
+                ├── model.safetensors
+                ├── preprocessor_config.json
+                ├── special_tokens_map.json
+                ├── tokenizer_config.json
+                ├── tokenizer.json
+                └── vocab.json
        ├── config/             
        ├── vision_model_clip.py        
        ├── multimodal_model_llava.py  
@@ -161,3 +206,59 @@ O projeto inclui notebooks que validam a eficácia da arquitetura híbrida:
 
 - `notebooks/concept_bottleneck_eval.ipynb`: demonstra que o CLIP Base possui maior sensibilidade para a detecção conceitos de imagens gerados por IA, enquanto o Fine-Tuned atua como filtro para reduzir falsos positivos.
 - `notebooks/clip-finetunning.ipynb`: documenta o processo de fine-tuning do do modelo em detecção de imagens geradas por IA
+
+
+## 💡 Roadmap do MegaTruth (Checklist)
+
+Aqui está o *roadmap* do MegaTruth formatado como uma lista de verificação (checklist), detalhando os subtópicos e entregáveis para cada módulo planejado.
+
+---
+
+### 1. GUI (Gradio/Streamlit)
+
+Criação da interface de usuário **simples e funcional** para demonstrações e usabilidade.
+
+* [x] **Design e Estrutura Inicial (MVP):**
+    * [x] Definir o *framework* de UI (Gradio/Streamlit).
+    * [x] Definir o *framework* de UI (Gradio)
+    * [x] Implementar o componente de **Upload de Imagem** (`PNG`, `JPG`).
+* [x] **Módulo de Saída Principal:**
+    * [x] Exibir **Rótulo de Classificação** (`Real` vs `IA`) e **Confiança**.
+    * [x] Área dedicada à visualização do **defect_map** (Grad-CAM).
+    * [x] Caixa de texto para a **Explicação Textual** (saída do LLaVA).
+* [x] **Funcionalidades Adicionais:**
+    * [x] Criar um **Histórico Simples** de análises da sessão.
+
+---
+
+### 2. Finetuning do CLIP
+
+Melhoria da precisão e **robustez** do classificador CLIP para o domínio *real vs IA*.
+
+* [x] **Preparação do Dataset Especializado:**
+    * [x] Curadoria de um **dataset balanceado** (Real vs. IA de múltiplos modelos generativos).
+    * [x] Implementar **Estratégia de Aumento de Dados** (*Data Augmentation*) simulando compressão (JPEG) e ruído.
+* [x] **Implementação do Finetuning (LoRA):**
+    * [x] Selecionar o *backbone* CLIP e definir a **arquitetura LoRA**.
+    * [x] Treinar o modelo utilizando LoRA e definir hiperparâmetros (taxa de aprendizado, épocas).
+* [x] **Avaliação e Comparação:**
+    * [x] Estabelecer a **linha de base (*baseline*)** do CLIP sem *finetuning*.
+    * [x] Avaliar o modelo *finetunado* em métricas como **Acurácia, AUC e F1-Score**..
+
+---
+
+### 3. Concept Bottleneck (Explicabilidade Profunda)
+
+Fornecer explicações intermediárias baseadas em **conceitos semânticos e visuais** de artefatos. 
+
+[Image of a Concept Bottleneck Model diagram showing input, concept layer, and output]
+
+
+* [x] **Definição de Conceitos:**
+    * [x] Definir uma ontologia de **artefatos de IA** e **inconsistências visuais** (ex: "Dedos Deformados", "Textura Irregular").
+    * [ ] Rotular um subconjunto do *dataset* com a **presença/ausência** desses conceitos.
+* [x] **Validação do Extrator de Conceitos:**
+    * [x] Avaliar se o CLIP Base (Zero-Shot) possui sensibilidade suficiente para atuar como o Gargalo Conceitual (CBM) sem necessidade de treino adicional.
+* [x] **Integração ao LLaVA:**
+    * [x] Modificar o *prompt* do LLaVA para incluir a **Lista de Conceitos Preditos**.
+    * [x] Instruir o LLaVA a **incorporar esses conceitos** na explicação textual.
