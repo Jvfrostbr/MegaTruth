@@ -168,8 +168,7 @@ class CLIPAIModel:
 
         # --- 2. Definição dos Prompts para o CLIPSeg ---
         # Prompts padrão (fallback)
-        seg_prompts = ["artifacts, noise, glitch", "blur, distortion"]
-        
+        seg_prompts = None
         conceitos_eng = {}
         
         # Se for FAKE ou incerto, buscamos o defeito específico
@@ -191,7 +190,7 @@ class CLIPAIModel:
                 seg_prompts = [visual_target]
 
         # --- 3. Geração da Máscara ---
-        if seg_prompts is None or len(seg_prompts) == 0:
+        if seg_prompts and len(seg_prompts) > 0:
             print(f"   >>> Gerando Segmentação para: {seg_prompts}")
             defect_map = self._generate_segmentation(image, seg_prompts)
 
