@@ -1,7 +1,7 @@
 RELATÓRIO DE ANÁLISE FORENSE - MEGATRUTH (LOCAL)
                 ==================================================================
-                ARQUIVO: images/AI/mao_deformada.jpeg
-                DATA:    07/12/2025 03:13:37
+                ARQUIVO: images/inferences/AI/mao_deformada.jpeg
+                DATA:    07/12/2025 20:48:29
                 MODELO:  LLaVA-7B (Local/Ollama)
                 ==================================================================
 
@@ -9,7 +9,7 @@ RELATÓRIO DE ANÁLISE FORENSE - MEGATRUTH (LOCAL)
                 ---------------------------------
                 Classificação:   IMAGEM GERADA POR IA
                 Grau de Certeza: 99.90%
-                Heatmap (Foco):  C:\Users\joaov\OneDrive\Documentos\GitHub\MegaTruth\outputs\heatmaps\mao_deformada.jpeg_clipseg.png
+                defect_map (Foco):  C:\Users\joaov\OneDrive\Documentos\GitHub\MegaTruth\outputs\defect_maps\mao_deformada.jpeg_clipseg.png
 
                 2. ANÁLISE SEMÂNTICA (Defeitos Específicos - Concept Bottleneck)
                 ----------------------------------------------------------------
@@ -20,15 +20,11 @@ RELATÓRIO DE ANÁLISE FORENSE - MEGATRUTH (LOCAL)
 
                 3. PARECER PERICIAL (LLaVA Vision)
                 ----------------------------------
-                 Na imagem original, vemos uma pessoa jovem, possivelmente coreana, segurando um cano e sorrindo para a câmera. Ela está usando uma camiseta de mangas branca e calças jeans vermelhas, o que sugere um estilo casual e moderno. A pessoa está em frente a uma estrutura que parece ser parte de um comércio ou restaurante.
+                 A imagem mostra uma mulher segurando um cano de bebida na rua. Ela está vestindo uma blusa branca, calça jeans e tem cabelos loiros. A pessoa está diante de uma loja com portas abertas e uma planta à esquerda do quadro.
 
-O heatmap indica que a máquina detectora de imagens viu dois pontos importantes: "holding object incorrectly" e "falsos positivos (ruído)." O detector encontrou duas áreas coloridas no heatmap, um pequeno na parte inferior esquerda da foto e um pequeno à direita.
+No Defect_map, há um foco intenso na parte superior direita da imagem, o que sugere que a mulher está posando para a foto, possivelmente de forma imatural ou artificial. Este é um dos padrões listados na análise semântica: "holding object incorrectly" (11.0% de intensidade). O foco no defect_map sugere que a postura ou maneira como ela segura o cano está sendo considerada estranha, o que pode ser um indicador da imagem ser gerada por IA.
 
-Na parte inferior esquerda, parece que a pessoa está segurando o cano de forma incerto, pois o braço não está segurando a mão firmemente sobre o objeto, como se estivesse segurando algo que não precisa ser segurado assim. Isso pode indicar um problema de posicionamento ou uma falta de atenção ao segurar objetos.
-
-Na parte superior direita do heatmap, há um pequeno ponto azul, o que pode ser interpretado como "falsos positivos" - ruídio em um contexto de classificação de imagens geradas por IA. Isso pode indicar que a máquina considerou essa área como uma característica ou detalhe importante, mas não é relevante para a classificação de gênero ou identidade real da pessoa na imagem.
-
-Com base nessas observações, o detector de imagens detectou dois elementos que podem ser considerados defeitos, mas apenas um deles foi confirmado em uma escala relevante para a classificação de falsos positivos. Portanto, não é possível concluir definitivamente se a imagem foi gerada por IA. 
+A classificação da imagem como "Imagem Gerada por IA" pode ser confirmada pelo foco intenso no Defect_map nas áreas onde a mulher está segurando o cano, indicando que é um exemplo de posição inadequada ou artificial para uma pessoa real. 
 
                 ==================================================================
                 Fim do Relatório
