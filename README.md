@@ -43,6 +43,10 @@ O sistema opera simulando o fluxo de trabalho de uma equipe forense:
 MegaTruth/
 │
 ├── images/
+│   ├── experiment              # pasta contendo imagens realizadas em alguns experimentos
+│   │   ├── erros               # Imagens que deram ou falso positivo ou falso negativo
+│   │   ├── IA                  # Imagens feitas por IA que foram detectadas corretamente
+│   │   └── real                # Imagens feitas reais que foram detectadas corretamente 
 │   ├── inferences/             # Dataset de validação e testes
 │   │   ├── AI/                 # (+250 imagens geradas por Midjourney, Flux, etc.)
 │   │   └── real/               # (+250 fotografias reais de controle)
