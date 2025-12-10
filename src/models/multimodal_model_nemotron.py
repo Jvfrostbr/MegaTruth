@@ -1,6 +1,9 @@
 import os
 import base64
 import requests
+from PIL import Image
+from io import BytesIO
+import time
 
 class NemotronVL:
     def __init__(self):
@@ -12,23 +15,85 @@ class NemotronVL:
 
         print(f"Usando modelo: {self.model_name}")
 
-    def _carregar_imagem_base64(self, caminho):
-        """Lê imagem como bytes e converte para base64."""
+    def _carregar_imagem_base64(self, caminho, resize_before_send=True, max_side=2000, quality=85, save_resized_path=None):
+        """Lê imagem, opcionalmente redimensiona/comprime e converte para base64.
+
+        Args:
+            caminho (str): caminho do arquivo original.
+            resize_before_send (bool): se True, redimensiona imagem mantendo proporção
+                para que o maior lado <= `max_side` e converte para JPEG com `quality`.
+            max_side (int): maior dimensão em pixels permitida antes de redimensionar.
+            quality (int): qualidade JPEG (0-100) para compressão em memória.
+            save_resized_path (str|None): caminho para salvar a versão redimensionada (opcional).
+        Returns:
+            str: string base64 pronta para inclusão em payload.
+        """
         if not os.path.exists(caminho):
             raise FileNotFoundError(f"Arquivo não encontrado: {caminho}")
 
-        with open(caminho, "rb") as f:
-            return base64.b64encode(f.read()).decode("utf-8")
+        # Se não for para redimensionar, apenas retorna o base64 do arquivo original
+        if not resize_before_send:
+            with open(caminho, "rb") as f:
+                return base64.b64encode(f.read()).decode("utf-8")
 
-    def analisar_imagens(self, imagem_original, defect_map, classificacao_clip, probabilidade_clip, conceitos_detectados=None, color_overlay="vermelho"):
+        # Abrir imagem e preparar para envio
+        try:
+            img = Image.open(caminho)
+        except Exception as e:
+            raise RuntimeError(f"Falha ao abrir imagem {caminho}: {e}")
+
+        if img.mode != "RGB":
+            img = img.convert("RGB")
+
+        w, h = img.size
+        if max(w, h) > max_side:
+            ratio = float(max_side) / float(max(w, h))
+            new_w = int(w * ratio)
+            new_h = int(h * ratio)
+            img = img.resize((new_w, new_h), Image.LANCZOS)
+            print(f"⤵️ Redimensionado para envio: {new_w}x{new_h} (max_side={max_side})")
+
+        # Salvar em JPEG na memória
+        buffer = BytesIO()
+        try:
+            img.save(buffer, format="JPEG", quality=quality, optimize=True)
+        except OSError:
+            buffer = BytesIO()
+            img.save(buffer, format="JPEG", quality=quality)
+
+        bytes_data = buffer.getvalue()
+
+        # Opcional: salvar versão redimensionada em disco para auditoria
+        if save_resized_path:
+            try:
+                with open(save_resized_path, "wb") as outf:
+                    outf.write(bytes_data)
+                print(f"🔖 Versão redimensionada salva em: {save_resized_path}")
+            except Exception as e:
+                print(f"⚠️ Falha ao salvar versão redimensionada: {e}")
+
+        return base64.b64encode(bytes_data).decode("utf-8")
+
+    def analisar_imagens(self, imagem_original, defect_map, classificacao_clip, probabilidade_clip, conceitos_detectados=None, color_overlay="vermelho", resize_images=True, max_side=2000, quality=85):
         """
         Envia imagem original + defect_map + conceitos semânticos para o Nemotron.
         """
 
         print("Carregando imagens...")
         try:
-            img1_b64 = self._carregar_imagem_base64(imagem_original)
-            img2_b64 = self._carregar_imagem_base64(defect_map)
+            # Gerar nomes para salvar versões redimensionadas (opcional)
+            resized1_path = None
+            resized2_path = None
+            # Se quisermos manter rastreio, salvamos em outputs/temp
+            tmp_dir = os.path.join(os.getcwd(), "outputs", "temp")
+            os.makedirs(tmp_dir, exist_ok=True)
+
+            if resize_images:
+                resized1_path = os.path.join(tmp_dir, f"resized_{int(time.time()*1000)}_1.jpg")
+                resized2_path = os.path.join(tmp_dir, f"resized_{int(time.time()*1000)}_2.jpg")
+
+            img1_b64 = self._carregar_imagem_base64(imagem_original, resize_before_send=resize_images, max_side=max_side, quality=quality, save_resized_path=resized1_path if resize_images else None)
+            img2_b64 = self._carregar_imagem_base64(defect_map, resize_before_send=resize_images, max_side=max_side, quality=quality, save_resized_path=resized2_path if resize_images else None)
         except Exception as e:
             print(f"Erro ao carregar imagens: {e}")
             return None

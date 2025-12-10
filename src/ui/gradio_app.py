@@ -108,7 +108,7 @@ def analyze_image(image, overlay_color):
         return None, "Erro", str(e), "", None, f"Erro: {str(e)}"
 
 
-def explain_with_multimodal(image_path, overlay_path, clip_label, clip_prob_str, conceitos_text, overlay_color):
+def explain_with_multimodal(image_path, overlay_path, clip_label, clip_prob_str, conceitos_text, overlay_color, prefer_nemotron=True, resize_images=True, max_side=2000, quality=85):
     """
         Gera explicação usando estratégia Híbrida:
             1. Tenta Nemotron (Melhor qualidade, API).
@@ -157,24 +157,27 @@ def explain_with_multimodal(image_path, overlay_path, clip_label, clip_prob_str,
             cor_real = "Vermelha"
     
         # --- 2. TENTATIVA A: NEMOTRON (API) ---
-        try:
+        if prefer_nemotron:
+            try:
+                print("🚀 Tentando Nemotron-12B (preferência do usuário)...")
+                nemotron = get_nemotron()
 
-            print("🚀 Tentando Nemotron-12B...")
-            nemotron = get_nemotron()
-            
-            response_text = nemotron.analisar_imagens(
-                imagem_original=image_path,
-                defect_map=overlay_path,
-                classificacao_clip=clip_label,
-                probabilidade_clip=prob_float,
-                conceitos_detectados=conceitos_dict if conceitos_dict else None,
-                color_overlay=cor_real
-            )
-            
-            if response_text:
-                model_used = "NVIDIA Nemotron-12B (Via API)"
-        except Exception as e:
-            print(f"⚠️ Nemotron falhou: {e}. Alternando para LLaVA...")
+                response_text = nemotron.analisar_imagens(
+                    imagem_original=image_path,
+                    defect_map=overlay_path,
+                    classificacao_clip=clip_label,
+                    probabilidade_clip=prob_float,
+                    conceitos_detectados=conceitos_dict if conceitos_dict else None,
+                    color_overlay=cor_real,
+                    resize_images=resize_images,
+                    max_side=max_side,
+                    quality=quality
+                )
+
+                if response_text:
+                    model_used = "NVIDIA Nemotron-12B (Via API)"
+            except Exception as e:
+                print(f"⚠️ Nemotron falhou: {e}. Alternando para LLaVA...")
 
         # --- 3. TENTATIVA B: LLAVA (Local) ---
         if not response_text:
@@ -357,6 +360,17 @@ def build_ui():
             variant="primary"
         )
         
+        # Escolha do backend de explicação / comportamento de imagem
+        model_selector = gr.Radio(
+            choices=[
+                "🔧 Nemotron (Reduzir imagem e usar Nemotron)",
+                "🛡️ LLaVA (Manter tamanho e usar LLaVA)"
+            ],
+            value="🔧 Nemotron (Reduzir imagem e usar Nemotron)",
+            label="Modo de Geração do Laudo",
+            info="Escolha se deseja reduzir a imagem e usar o Nemotron, ou manter o tamanho e usar a LLaVA local."
+        )
+        
         # Indicador de carregamento
         # loading_indicator = gr.HTML(
         #     value='<div style="display:none; text-align:center;"><p>Carregando modelo multimodal...</p><div style="border: 4px solid #f3f3f3; border-top: 4px solid #00baff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto;"></div><style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style></div>'
@@ -392,16 +406,31 @@ def build_ui():
             ]
         )
         
-        def on_explain(img_path, overlay_path, label, prob, conceitos, color):
+        def on_explain(img_path, overlay_path, label, prob, conceitos, color, model_choice):
             if not img_path or not overlay_path:
                 return "⚠️ Erro: Execute a análise visual primeiro."
-            
-            result = explain_with_multimodal(img_path, overlay_path, label, prob, conceitos, overlay_color=color)
+
+            prefer_nemotron = True if "Nemotron" in model_choice else False
+            resize_images = True if prefer_nemotron else False
+
+            result = explain_with_multimodal(
+                image_path=img_path,
+                overlay_path=overlay_path,
+                clip_label=label,
+                clip_prob_str=prob,
+                conceitos_text=conceitos,
+                overlay_color=color,
+                prefer_nemotron=prefer_nemotron,
+                resize_images=resize_images,
+                max_side=2000,
+                quality=85
+            )
+
             return result
         
         explain_btn.click(
             fn=on_explain,
-            inputs=[state_image_path, state_overlay_path, state_label, state_prob, state_conceitos, color_selector],
+            inputs=[state_image_path, state_overlay_path, state_label, state_prob, state_conceitos, color_selector, model_selector],
             outputs=[explanation_display]
         )
     
