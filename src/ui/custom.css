@@ -1,0 +1,36 @@
+:root {
+    --primary-500: #00baff;
+    --primary-600: #009ecf;
+    --primary-700: #007fa8;
+}
+
+/* Botões primários */
+button.primary {
+    background-color: #00baff !important;
+    border-color: #00baff !important;
+}
+
+/* Botão hover */
+button.primary:hover {
+    background-color: #009ecf !important;
+    border-color: #009ecf !important;
+}
+
+/* Radio / checkbox selecionados */
+input[type="radio"]:checked {
+    accent-color: #00baff;
+}
+
+/* Barra de progresso */
+progress::-webkit-progress-value {
+    background-color: #00baff;
+}
+
+        .laudo-box {
+            border: 2px solid #00baff;
+            border-radius: 10px;
+            padding: 15px;
+            min-height: 200px;
+            box-shadow: 0 0 8px rgba(0,186,255,0.15);
+            font-family: Consolas, monospace;
+        }
