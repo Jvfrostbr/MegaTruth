@@ -1,10 +1,12 @@
 import torch
 import numpy as np
 from PIL import Image
-import cv2
 import os
 import warnings
-from transformers import CLIPProcessor, CLIPModel, CLIPSegProcessor, CLIPSegForImageSegmentation
+from transformers import CLIPProcessor, CLIPModel
+
+# Importando o novo módulo de segmentação
+from .segmentation_clipseg import CLIPSegModel
 
 warnings.filterwarnings("ignore", category=UserWarning, message=".*cuBLAS.*")
 
@@ -16,7 +18,7 @@ class CLIPAIModel:
         if self.device == "cuda":
             torch.cuda.current_device()
 
-        # 1. Carrega Arquivos de Configuração (Conceitos e Âncoras)
+        # 1. Carrega Arquivos de Configuração
         self._load_configurations()
 
         # 2. Modelo Tuned (O Juiz - Classificação)
@@ -55,20 +57,11 @@ class CLIPAIModel:
              self.model_base = self.model_tuned
              self.proc_base = self.proc_tuned
 
-        # 4. CLIPSeg (O Desenhista - defect_maps Precisos)
-        print("🎨 Carregando CLIPSeg (Segmentação Visual)...")
-        try:
-            self.seg_processor = CLIPSegProcessor.from_pretrained("CIDAS/clipseg-rd64-refined", use_fast=True)
-            self.seg_model = CLIPSegForImageSegmentation.from_pretrained("CIDAS/clipseg-rd64-refined").to(self.device)
-            self.seg_model.eval()
-        except Exception as e:
-            print(f"❌ Erro ao baixar CLIPSeg: {e}")
-            raise e
+        # 4. Instancia o novo módulo de Segmentação
+        self.segmenter = CLIPSegModel(device=self.device)
         
-        # Classes internas em Inglês para o CLIP
+        # Classes internas
         self.classes_eng = ["a real photograph", "an AI-generated image"]
-        
-        # Mapeamento para Português (Output)
         self.classes_pt_map = {
             "a real photograph": "Fotografia Real",
             "an AI-generated image": "Imagem Gerada por IA"
@@ -76,14 +69,13 @@ class CLIPAIModel:
 
     def _load_configurations(self):
         """Lê os arquivos txt de conceitos e âncoras para memória."""
-        self.concepts_eng = []      # Lista para o CLIP (Inglês)
-        self.concepts_map = {}      # Tradução (Inglês -> Português)
-        self.visual_anchors = {}    # Mapeamento (Keyword -> Target Visual)
+        self.concepts_eng = []      
+        self.concepts_map = {}      
+        self.visual_anchors = {}    
 
         base_dir = os.path.dirname(os.path.abspath(__file__))
         config_dir = os.path.join(base_dir, "config") 
 
-        # Carregar Conceitos
         try:
             with open(os.path.join(config_dir, "concepts.txt"), "r", encoding="utf-8") as f:
                 for line in f:
@@ -94,11 +86,9 @@ class CLIPAIModel:
             print(f"✅ Carregados {len(self.concepts_eng)} conceitos.")
         except Exception as e:
             print(f"⚠️ Erro ao carregar concepts.txt: {e}")
-            # Fallback básico se arquivo falhar
             self.concepts_eng = ["artifacts", "blur"]
             self.concepts_map = {"artifacts": "artefatos", "blur": "borrão"}
 
-        # Carregar Âncoras
         try:
             with open(os.path.join(config_dir, "anchors.txt"), "r", encoding="utf-8") as f:
                 for line in f:
@@ -109,49 +99,13 @@ class CLIPAIModel:
         except Exception as e:
             print(f"⚠️ Erro ao carregar anchors.txt: {e}")
 
-    def _generate_segmentation(self, image, prompts):
-        """
-        Usa CLIPSeg para gerar máscaras precisas.
-        """
-        inputs = self.seg_processor(
-            text=prompts, 
-            images=[image] * len(prompts), 
-            padding=True, 
-            return_tensors="pt"
-        ).to(self.device)
-
-        with torch.no_grad():
-            outputs = self.seg_model(**inputs)
-        
-        preds = outputs.logits
-        
-        if len(preds.shape) == 2:
-            preds = preds.unsqueeze(0)
-            
-        masks = torch.sigmoid(preds).cpu().numpy()
-        
-        w, h = image.size
-        final_mask = np.zeros((h, w), dtype=np.float32)
-        
-        for mask in masks:
-            if mask.ndim > 2:
-                mask = np.squeeze(mask)
-            mask_resized = cv2.resize(mask, (w, h))
-            final_mask = np.maximum(final_mask, mask_resized)
-            
-        return final_mask
-
     def predict_with_defect_map(self, image_path, overlay_color="red"):
         """
-        Pipeline principal: Classifica -> Analisa Conceitos -> Gera defect_map -> Traduz Saída.
-        Args:
-            image_path (str): Caminho da imagem.
-            overlay_color (str): 'red', 'green', ou 'blue'. Define a cor da mancha.
+        Pipeline principal: Classifica -> Analisa Conceitos -> Gera defect_map via CLIPSeg.
         """
-        os.makedirs("outputs/defect_maps", exist_ok=True)
         image = Image.open(image_path).convert("RGB")
         
-        # --- 1. Classificação (Tuned - Inglês) ---
+        # --- 1. Classificação ---
         inputs = self.proc_tuned(
             text=self.classes_eng, 
             images=image, 
@@ -166,20 +120,16 @@ class CLIPAIModel:
             label_eng = self.classes_eng[pred_idx]
             prob = float(probs[pred_idx])
 
-        # --- 2. Definição dos Prompts para o CLIPSeg ---
-        # Prompts padrão (fallback)
+        # --- 2. Definição dos Prompts ---
         seg_prompts = None
         conceitos_eng = {}
         
-        # Se for FAKE ou incerto, buscamos o defeito específico
         if pred_idx == 1 or prob < 0.85:
-            # Analisa conceitos (retorna dict em Inglês)
             conceitos_eng = self.analisar_conceitos(image_path, classificacao_preliminar=label_eng)
             
             if conceitos_eng:
-                original_concept = list(conceitos_eng.keys())[0] # Ex: "deformed fingers"
+                original_concept = list(conceitos_eng.keys())[0] 
                 
-                # Busca âncora visual
                 visual_target = original_concept
                 for key, val in self.visual_anchors.items():
                     if key in original_concept.lower():
@@ -189,67 +139,14 @@ class CLIPAIModel:
                 print(f"   >>> CLIPSeg Alvo: '{visual_target}' (Origem: {original_concept})")
                 seg_prompts = [visual_target]
 
-        # --- 3. Geração da Máscara ---
+        # --- 3. Delegação da Máscara para o Módulo de Segmentação ---
         if seg_prompts and len(seg_prompts) > 0:
-            print(f"   >>> Gerando Segmentação para: {seg_prompts}")
-            defect_map = self._generate_segmentation(image, seg_prompts)
-
-            # --- 4. Pós-Processamento Visual ---
-            defect_map_min = np.min(defect_map)
-            defect_map_max = np.max(defect_map)
-            if defect_map_max > defect_map_min:
-                defect_map = (defect_map - defect_map_min) / (defect_map_max - defect_map_min)
-            else:
-                defect_map = np.zeros_like(defect_map)
-            
-            # limiarização de 0.35 para  reduzir o ruído e manter apenas as áreas mais relevantes
-            defect_map[defect_map < 0.35] = 0
-
-            # --- SUAVIZAÇÃO ADAPTATIVA (Dinâmica) ---
-            h, w = defect_map.shape
-            # Define o kernel como 3% da menor dimensão da imagem
-            k_size = int(min(h, w) * 0.03)
-            
-            # O kernel precisa ser ímpar e ter tamanho mínimo de 3
-            if k_size % 2 == 0:
-                k_size += 1
-            if k_size < 3:
-                k_size = 3
-                
-            defect_map_smooth = cv2.GaussianBlur(defect_map, (k_size, k_size), 0)
-
-            # --- 5. GERAÇÃO DO OVERLAY COLORIDO ---
-            img_np = np.array(image)
-            color_mask = np.zeros_like(img_np)
-            
-            # Define a cor da máscara (RGB aqui, pois o PIL abriu como RGB)
-            if overlay_color == "green":
-                color_mask[:, :, 1] = 255  # Canal G (Verde)
-            elif overlay_color == "blue":
-                color_mask[:, :, 2] = 255  # Canal B (Azul)
-            else: # Default: Red
-                color_mask[:, :, 0] = 255  # Canal R (Vermelho)
-            
-            img_float = img_np.astype(np.float32) / 255.0
-            mask_float = color_mask.astype(np.float32) / 255.0
-            alpha = defect_map_smooth[:, :, None]
-            
-            # Mistura: (Cor * alpha) + (Imagem * (1 - alpha*0.3))
-            # O fator 0.3 no alpha negativo mantém a imagem original visível por baixo
-            overlay = (mask_float * alpha * 0.6) + (img_float * (1.0 - (alpha * 0.3)))
-            overlay = np.clip(overlay * 255, 0, 255).astype(np.uint8)
-            
-            # Converte RGB -> BGR para o OpenCV salvar corretamente
-            overlay_bgr = cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR)
-            
-            base = os.path.basename(image_path)
-            overlay_path = f"outputs/defect_maps/{base}_clipseg.png"
-            cv2.imwrite(overlay_path, overlay_bgr)
-            
+            # Passa a responsabilidade do overlay para o segmenter
+            overlay_path = self.segmenter.generate_defect_overlay(image_path, seg_prompts, overlay_color)
         else:
             overlay_path = image_path  # Sem overlay gerado
 
-        # --- 6. TRADUÇÃO PARA SAÍDA (PT-BR) ---
+        # --- 4. Tradução para Saída ---
         label_pt = self.classes_pt_map.get(label_eng, label_eng)
         
         conceitos_pt = {}
@@ -271,15 +168,13 @@ class CLIPAIModel:
         
     def analisar_conceitos(self, image_path, classificacao_preliminar=None):
         """
-        Testa a imagem contra a lista de conceitos carregada (Inglês).
+        Testa a imagem contra a lista de conceitos carregada.
         """
-        # Adiciona prompt de controle
         conceitos_completos = self.concepts_eng + ["a high quality natural photograph"]
 
         try:
             image = Image.open(image_path).convert("RGB")
             
-            # Gating
             if classificacao_preliminar == "a real photograph" or classificacao_preliminar == 0:
                 threshold = 0.25 
             else:
@@ -299,8 +194,6 @@ class CLIPAIModel:
                 probs = logits_per_image.softmax(dim=1).cpu().numpy()[0]
 
             resultado = {}
-            
-            # Varre apenas os conceitos (ignora o último que é o controle)
             for i in range(len(self.concepts_eng)):
                 if probs[i] > threshold: 
                     resultado[self.concepts_eng[i]] = float(probs[i])
