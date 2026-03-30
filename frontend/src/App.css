@@ -1,0 +1,79 @@
+.content-container {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+}
+
+.input-section {
+  margin-bottom: 30px;
+}
+
+.analyze-button,
+.explain-button {
+  width: 100%;
+  padding: 12px 24px;
+  margin-top: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.analyze-button:hover:not(:disabled),
+.explain-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+}
+
+.analyze-button:disabled,
+.explain-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.explanation-section {
+  margin-top: 40px;
+  padding-top: 40px;
+  border-top: 2px solid #f0f0f0;
+}
+
+.model-selector {
+  margin-bottom: 20px;
+}
+
+.model-selector label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #333;
+}
+
+.model-selector select {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+}
+
+.model-selector select:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.error-message {
+  margin-top: 15px;
+  padding: 12px;
+  background: #fee;
+  border-left: 4px solid #f44;
+  border-radius: 4px;
+  color: #c33;
+  font-size: 14px;
+}

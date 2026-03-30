@@ -10,3 +10,5 @@ gradio
 ollama
 datasets
 python-dotenv
+flask
+flask-cors
