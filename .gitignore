@@ -10,3 +10,6 @@ __pycache__/
 
 /images/uploaded
 /outputs
+/backend/models/clip_finetuned/model.safetensors
+/backup_clip-hybrid-100pct.zip
+/frontend/node_modules

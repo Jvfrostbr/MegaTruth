@@ -22,7 +22,7 @@ export const analyzeImage = async (imageData, overlayColor) => {
 
 export const generateExplanation = async (
   imagePath,
-  overlayBase64,
+  defectMaps,
   clipLabel,
   clipProbability,
   conceitos,
@@ -32,7 +32,7 @@ export const generateExplanation = async (
   try {
     const response = await axios.post(`${API_BASE_URL}/explain`, {
       image_path: imagePath,
-      overlay_base64: overlayBase64,
+      defect_maps: defectMaps,
       clip_label: clipLabel,
       clip_probability: clipProbability,
       conceitos: conceitos,

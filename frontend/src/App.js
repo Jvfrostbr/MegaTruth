@@ -56,7 +56,7 @@ function App() {
     try {
       const result = await generateExplanation(
         analysisResult.image_path,
-        analysisResult.overlay_base64,
+        analysisResult.defect_maps,
         analysisResult.label,
         analysisResult.probability,
         analysisResult.conceitos,

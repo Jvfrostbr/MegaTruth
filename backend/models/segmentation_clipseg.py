@@ -49,7 +49,7 @@ class CLIPSegModel:
             
         return final_mask
 
-    def generate_defect_overlay(self, image_path, prompts, overlay_color="red"):
+    def generate_defect_overlay(self, image_path, prompts, overlay_color="red", prompt_index=0):
         """
         Gera a máscara, aplica pós-processamento e salva o overlay.
         """
@@ -102,7 +102,10 @@ class CLIPSegModel:
         # Converte para BGR e salva
         overlay_bgr = cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR)
         base = os.path.basename(image_path)
-        overlay_path = f"outputs/defect_maps/{base}_clipseg.png"
+        name_without_ext = os.path.splitext(base)[0]
+        
+        # Adiciona índice para diferenciar múltiplos overlays
+        overlay_path = f"outputs/defect_maps/{name_without_ext}_defect_{prompt_index}.png"
         cv2.imwrite(overlay_path, overlay_bgr)
         
         return overlay_path

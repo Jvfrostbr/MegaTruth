@@ -128,23 +128,33 @@ class CLIPAIModel:
             conceitos_eng = self.analisar_conceitos(image_path, classificacao_preliminar=label_eng)
             
             if conceitos_eng:
-                original_concept = list(conceitos_eng.keys())[0] 
-                
-                visual_target = original_concept
-                for key, val in self.visual_anchors.items():
-                    if key in original_concept.lower():
-                        visual_target = val
-                        break
-                
-                print(f"   >>> CLIPSeg Alvo: '{visual_target}' (Origem: {original_concept})")
-                seg_prompts = [visual_target]
+                seg_prompts = []
+                for original_concept in conceitos_eng.keys():
+                    visual_target = original_concept
+                    for key, val in self.visual_anchors.items():
+                        if key in original_concept.lower():
+                            visual_target = val
+                            break
+                    
+                    print(f"   >>> CLIPSeg Alvo: '{visual_target}' (Origem: {original_concept})")
+                    seg_prompts.append(visual_target)
 
         # --- 3. Delegação da Máscara para o Módulo de Segmentação ---
+        defect_maps = []
         if seg_prompts and len(seg_prompts) > 0:
-            # Passa a responsabilidade do overlay para o segmenter
-            overlay_path = self.segmenter.generate_defect_overlay(image_path, seg_prompts, overlay_color)
-        else:
-            overlay_path = image_path  # Sem overlay gerado
+            # Gera defect map para cada prompt/conceito
+            for i, prompt in enumerate(seg_prompts):
+                overlay_path = self.segmenter.generate_defect_overlay(image_path, [prompt], overlay_color, prompt_index=i)
+                concept_eng = list(conceitos_eng.keys())[i] if i < len(conceitos_eng) else prompt
+                concept_pt = self.concepts_map.get(concept_eng, concept_eng)
+                prob_concept = conceitos_eng.get(concept_eng, 0.0)
+                
+                defect_maps.append({
+                    "conceito": concept_pt,
+                    "probabilidade": prob_concept,
+                    "defect_map_path": overlay_path,
+                    "prompt": prompt
+                })
 
         # --- 4. Tradução para Saída ---
         label_pt = self.classes_pt_map.get(label_eng, label_eng)
@@ -160,8 +170,7 @@ class CLIPAIModel:
             "label": label_pt,
             "probability": prob, 
             "probabilities": probs_pt,
-            "defect_map_path": overlay_path,
-            "overlay_path": overlay_path, 
+            "defect_maps": defect_maps,
             "conceitos": conceitos_pt,
             "color_used": overlay_color 
         }

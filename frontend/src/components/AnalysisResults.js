@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './AnalysisResults.css';
 
 function AnalysisResults({ result }) {
-  const { label, probability, conceitos, overlay_base64 } = result;
+  const { label, probability, conceitos, defect_maps } = result;
+  const [currentDefectMapIndex, setCurrentDefectMapIndex] = useState(0);
 
   const formatConceitos = () => {
     if (!conceitos || Object.keys(conceitos).length === 0) {
@@ -14,6 +15,15 @@ function AnalysisResults({ result }) {
       .map(([key, value]) => `• ${key}: ${(value * 100).toFixed(1)}%`)
       .join('\n');
   };
+
+  // Cria lista de conceitos ordenados por probabilidade
+  const sortedConceitos = defect_maps && defect_maps.length > 0
+    ? defect_maps
+        .map((d, idx) => ({ ...d, index: idx }))
+        .sort((a, b) => b.probabilidade - a.probabilidade)
+    : [];
+
+  const currentDefectMap = defect_maps && defect_maps.length > 0 ? defect_maps[currentDefectMapIndex] : null;
 
   return (
     <div className="analysis-results">
@@ -38,13 +48,45 @@ function AnalysisResults({ result }) {
             <pre>{formatConceitos()}</pre>
           </div>
         </div>
-        
-        {overlay_base64 && (
+
+        {sortedConceitos.length > 0 && (
           <div className="result-item full-width">
-            <div className="result-label">Indicador dos defeitos Visuais</div>
+            <div className="result-label">Selecione um Defeito</div>
+            <div className="defect-buttons-container">
+              {sortedConceitos.map((defect, idx) => (
+                <button
+                  key={idx}
+                  className={`defect-button ${currentDefectMapIndex === defect.index ? 'active' : ''}`}
+                  onClick={() => setCurrentDefectMapIndex(defect.index)}
+                >
+                  <span className="button-concept">{defect.conceito}</span>
+                  <span className="button-probability">
+                    {(defect.probabilidade * 100).toFixed(1)}%
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {currentDefectMap && (
+          <div className="result-item full-width">
+            <div className="defect-map-header-full">
+              <div className="defect-info">
+                <span className="defect-concept">{currentDefectMap.conceito}</span>
+                <span className="defect-probability">
+                  {(currentDefectMap.probabilidade * 100).toFixed(1)}%
+                </span>
+              </div>
+              {defect_maps.length > 1 && (
+                <div className="defect-counter">
+                  {currentDefectMapIndex + 1} de {defect_maps.length}
+                </div>
+              )}
+            </div>
             <img 
-              src={`data:image/png;base64,${overlay_base64}`}
-              alt="Defect Map"
+              src={`data:image/png;base64,${currentDefectMap.image_base64}`}
+              alt={`Defect Map - ${currentDefectMap.conceito}`}
               className="defect-map"
             />
           </div>

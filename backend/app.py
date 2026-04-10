@@ -81,7 +81,7 @@ def health_check():
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze_image():
-    """Analyze image with CLIP and generate defect map"""
+    """Analyze image with CLIP and generate defect maps"""
     try:
         data = request.json
         image_data = data.get('image')
@@ -106,12 +106,21 @@ def analyze_image():
         clip = get_clip()
         result = clip.predict_with_defect_map(img_path, overlay_color=selected_code)
         
-        # Convert overlay image to base64 for frontend
-        overlay_path = result.get("overlay_path")
-        overlay_base64 = None
-        if overlay_path and os.path.exists(overlay_path):
-            with open(overlay_path, "rb") as f:
-                overlay_base64 = base64.b64encode(f.read()).decode('utf-8')
+        # Convert defect maps to base64
+        defect_maps_base64 = []
+        defect_maps = result.get("defect_maps", [])
+        for defect_map in defect_maps:
+            map_path = defect_map.get("defect_map_path")
+            if map_path and os.path.exists(map_path):
+                with open(map_path, "rb") as f:
+                    map_base64 = base64.b64encode(f.read()).decode('utf-8')
+                
+                defect_maps_base64.append({
+                    'conceito': defect_map.get('conceito'),
+                    'probabilidade': defect_map.get('probabilidade'),
+                    'prompt': defect_map.get('prompt'),
+                    'image_base64': map_base64
+                })
         
         # Prepare response
         response = {
@@ -119,7 +128,7 @@ def analyze_image():
             'label': result.get("label", "N/A"),
             'probability': result.get("probability", 0.0),
             'conceitos': result.get("conceitos", {}),
-            'overlay_base64': overlay_base64,
+            'defect_maps': defect_maps_base64,
             'status': 'success'
         }
         
@@ -135,7 +144,7 @@ def generate_explanation():
     try:
         data = request.json
         image_path = data.get('image_path')
-        overlay_base64 = data.get('overlay_base64')
+        defect_maps = data.get('defect_maps', [])  # Lista de defect maps
         clip_label = data.get('clip_label')
         clip_probability = data.get('clip_probability', 0.0)
         conceitos = data.get('conceitos', {})
@@ -146,13 +155,16 @@ def generate_explanation():
         if not image_path or not os.path.exists(image_path):
             return jsonify({'error': 'Image file not found'}), 400
         
-        # Save overlay image temporarily if provided
+        # Use the first (highest probability) defect map for explanation
         overlay_path = None
-        if overlay_base64:
-            overlay_path = os.path.join("outputs", "defect_maps", f"temp_overlay_{int(time.time())}.png")
-            overlay_data = base64.b64decode(overlay_base64)
-            with open(overlay_path, "wb") as f:
-                f.write(overlay_data)
+        if defect_maps and len(defect_maps) > 0:
+            first_defect = defect_maps[0]
+            overlay_base64 = first_defect.get('image_base64')
+            if overlay_base64:
+                overlay_path = os.path.join("outputs", "defect_maps", f"temp_overlay_{int(time.time())}.png")
+                overlay_data = base64.b64decode(overlay_base64)
+                with open(overlay_path, "wb") as f:
+                    f.write(overlay_data)
         
         # Map color for display
         cor_real = "Vermelha"
@@ -217,6 +229,7 @@ def generate_explanation():
             return jsonify({
                 'explanation': response_text,
                 'model_used': model_used,
+                'defect_maps_count': len(defect_maps),
                 'status': 'success'
             })
         else:
