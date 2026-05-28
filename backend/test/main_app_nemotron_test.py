@@ -142,3 +142,38 @@ if __name__ == "__main__":
         print(f"\n❌ Erro fatal durante a execução: {e}")
         import traceback
         traceback.print_exc()
+
+    def test_classification(imagem_path):
+        """
+        Função de teste para verificar a classificação do CLIP.
+        """
+        try:
+            clip_model = CLIPAIModel()
+        except Exception as e:
+            print(f"Erro durante o teste de classificação: {e}")
+
+        resultados = clip_model.predict_with_defect_map(imagem_path)
+
+        classificacao = resultados['label']
+        probabilidade = resultados['probability']
+        defect_map_path = resultados['overlay_path']
+
+        conceitos = clip_model.analisar_conceitos(imagem_path)
+
+        try:
+            nemotron = NemotronVL()
+
+        except Exception as e:
+            print(f"Erro ao inicializar o Nemotron: {e}")
+            return classificacao, probabilidade, defect_map_path, conceitos
+        
+        analise_final = nemotron.analisar_imagens(
+            imagem_original=imagem_path,
+            defect_map=defect_map_path,
+            classificacao_clip=classificacao,
+            probabilidade_clip=probabilidade,
+            conceitos_detectados=conceitos,
+            color_overlay="vermelho"
+        )
+
+        return classificacao, probabilidade, defect_map_path, conceitos, analise_final

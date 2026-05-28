@@ -135,3 +135,41 @@ if __name__ == "__main__":
         print(f"\n❌ Erro fatal durante a execução: {e}")
         import traceback
         traceback.print_exc()
+
+    def test_classification(imagem_path):
+        """
+        Função de teste para classificação e análise usando CLIP e LLaVA.
+        """
+        
+        try:
+            clip_model = CLIPAIModel()
+        except Exception as e:
+            print(f"Erro ao inicializar o CLIP: {e}")
+            return None, None, None, None, None
+
+        print(f"Analisando imagem: {imagem_path}")
+        resultado_clip = clip_model.predict_with_defect_map(imagem_path)
+
+        classification = resultado_clip['label']
+        confidence = resultado_clip['probability']
+        defect_map_path = resultado_clip['overlay_path']
+
+        conceitos = clip_model.analisar_conceitos(imagem_path)
+
+        try:
+            llava_model = LLaVAModel()
+        except Exception as e:
+            print(f"Erro ao inicializar o LLaVA: {e}")
+            return classification, confidence, defect_map_path, conceitos, None
+
+        analise_final = llava_model.analisar_imagens(
+            imagem_original=imagem_path,
+            defect_map=resultado_clip["overlay_path"],
+            classificacao_clip=resultado_clip["label"],
+            probabilidade_clip=resultado_clip["probability"],
+            conceitos_detectados=conceitos, 
+            color_overlay="Vermelho" 
+        )
+
+        return classification, confidence, defect_map_path, conceitos, analise_final 
+
