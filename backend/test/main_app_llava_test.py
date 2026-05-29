@@ -136,7 +136,7 @@ if __name__ == "__main__":
         import traceback
         traceback.print_exc()
 
-    def test_classification(imagem_path):
+def test_classification(imagem_path):
         """
         Função de teste para classificação e análise usando CLIP e LLaVA.
         """
